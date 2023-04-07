@@ -9,7 +9,8 @@ import shutil
 import os
 import torch
 import torch.nn as nn
-from torchcrf import CRF
+# from torchcrf import CRF
+from TorchCRF import CRF
 from torch.utils.data import Dataset
 from transformers import RobertaModel
 from transformers import RobertaTokenizer
@@ -47,6 +48,7 @@ class SegDataset(Dataset):
                     self.sents.append(['[CLS]'] + words + ['[SEP]'])
                     self.labels.append(['[CLS]'] + tags + ['[SEP]'])
                 words, tags = [], []
+        print("dataset size: ", len(self.sents))
 
     # read the data
     def read_segmentation(self, data_path):
@@ -61,6 +63,7 @@ class SegDataset(Dataset):
             for line in f.readlines():
                 line_content = json.loads(line)
                 all_texts.append(line_content)
+        all_texts = all_texts[:2]
         for doc in all_texts:
             doc_token_list = doc["doc_sents"]
             doc_label_list = doc["doc_sent_token_labels"]
@@ -110,7 +113,7 @@ class Roberta_BiLSTM_CRF(nn.Module):
                             num_layers=2, bidirectional=True, batch_first=True)
         self.dropout = nn.Dropout(p=0.1)
         self.linear = nn.Linear(hidden_dim * 2, self.tagset_size)
-        self.crf = CRF(self.tagset_size, batch_first=True)
+        self.crf = CRF(self.tagset_size) # , batch_first=True)
 
     def _get_features(self, sentence):
         with torch.no_grad():
@@ -122,7 +125,8 @@ class Roberta_BiLSTM_CRF(nn.Module):
     def forward(self, input, mask):
         out = self._get_features(input)
 
-        return self.crf.decode(out, mask)
+        # return self.crf.decode(out, mask)
+        return self.crf.viterbi_decode(out, mask)
 
     def loss_fn(self, input, target, mask):
         y_pred = self._get_features(input)
@@ -234,4 +238,14 @@ def assess_segmentation(true_label, predict_label, label2id, original_label):
 
 
 if __name__ == "__main__":
-    file_path = "./data/eng.rst.gum/eng.rst.gum_dev.json"
+    train_file_path = "data/dataset/eng.rst.gum/eng.rst.gum_train.json"
+    dev_file_path = "data/dataset/eng.rst.gum/eng.rst.gum_dev.json"
+    roberta_model = 'roberta-base'
+    tokenizer = RobertaTokenizer.from_pretrained(roberta_model)
+    model_choice = Roberta_BiLSTM_CRF
+    epochs = 10
+
+    trained_model, label2id, original_label = train_segmentation(train_file_path, model_choice, tokenizer, epochs)
+    
+    y_true_tensor_train, y_pred_tensor_train, label2id, original_label = test_segmentation(dev_file_path, tokenizer, trained_model)
+    precision_list, recall_list, f1_list = assess_segmentation(y_true_tensor_train, y_pred_tensor_train, label2id, original_label)

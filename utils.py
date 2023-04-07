@@ -15,6 +15,7 @@ def token_labels_from_file(file_name):
                         labels.add(l.lower())
     labels = list(labels)
     labels = sorted(labels)
+    print(labels)
     label_dict = {l: idx for idx, l in enumerate(labels)}
 
     return label_dict, labels
@@ -33,6 +34,8 @@ def rel_labels_from_file(file_name):
     labels = list(labels)
     labels = sorted(labels)
     label_dict = {l: idx for idx, l in enumerate(labels)}
+    print(label_dict)
+    print(labels)
 
     return label_dict, labels
 
@@ -52,6 +55,8 @@ def rel_preds_to_file(pred_ids, label_list, gold_file):
     valid_lines = []
     with open(gold_file, "r", encoding="utf-8") as f:
         lines = f.readlines()
+        title_line = lines[0]
+        lines = lines[1:]
         for line in lines:
             line = line.strip()
             if line:
@@ -66,8 +71,9 @@ def rel_preds_to_file(pred_ids, label_list, gold_file):
         new_items.append(pred)
         pred_contents.append("\t".join(new_items))
 
-    pred_file = gold_file.replace(".rel", "pred.rel")
-    with open(pred_file, "r", encoding="utf-8") as f:
+    pred_file = gold_file.replace(".rels", "_pred.rels")
+    with open(pred_file, "w", encoding="utf-8") as f:
+        f.write("%s\n"%(title_line.strip()))
         for text in pred_contents:
             f.write("%s\n"%(text))
 

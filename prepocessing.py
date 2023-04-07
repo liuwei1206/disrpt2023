@@ -615,14 +615,14 @@ if __name__ == "__main__":
 
     '''
 
-    convert_all("./data/")
+    convert_all("data/dataset/")
 
-    tur_dev_conll_file = "data/tur.pdtb.tdb/tur.pdtb.tdb_dev.conllu"
-    tur_dev_rel_file = "data/tur.pdtb.tdb/tur.pdtb.tdb_dev.rels"
-    tur_dev_output_file = "data/tur.pdtb.tdb/tur.pdtb.tdb_dev.json"
+    tur_dev_conll_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_dev.conllu"
+    tur_dev_rel_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_dev.rels"
+    tur_dev_output_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_dev.json"
 
-    tur_train_conll_file = "data/tur.pdtb.tdb/tur.pdtb.tdb_train.conllu"
-    tur_train_rel_file = "data/tur.pdtb.tdb/tur.pdtb.tdb_train.rels"
-    tur_train_output_file = "data/tur.pdtb.tdb/tur.pdtb.tdb_train.json"
+    tur_train_conll_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_train.conllu"
+    tur_train_rel_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_train.rels"
+    tur_train_output_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_train.json"
     convert_tur(tur_dev_conll_file, tur_dev_rel_file, tur_dev_output_file)
     convert_tur(tur_train_conll_file, tur_train_rel_file, tur_train_output_file)

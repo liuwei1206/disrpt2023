@@ -56,16 +56,16 @@ def get_argparse():
     parser.add_argument("--do_dev", default=False, action="store_true")
     parser.add_argument("--do_test", default=False, action="store_true")
     parser.add_argument("--do_freeze", default=False, action="store_true")
-    parser.add_argument("--train_batch_size", default=8, type=int)
-    parser.add_argument("--eval_batch_size", default=24, type=int)
-    parser.add_argument("--max_seq_length", default=256, type=int)
+    parser.add_argument("--train_batch_size", default=16, type=int)
+    parser.add_argument("--eval_batch_size", default=8, type=int)
+    parser.add_argument("--max_seq_length", default=128, type=int)
     parser.add_argument("--num_train_epochs", default=10, type=int, help="training epoch")
-    parser.add_argument("--learning_rate", default=3e-3, type=float, help="learning rate")
-    parser.add_argument("--dropout", default=0.0, type=float)
+    parser.add_argument("--learning_rate", default=1e-5, type=float, help="learning rate")
+    parser.add_argument("--dropout", default=0.1, type=float)
     parser.add_argument("--max_grad_norm", default=2.0, type=float)
     parser.add_argument("--weight_decay", default=0.1, type=float)
     parser.add_argument("--warmup_ratio", default=0.06, type=float)
-    parser.add_argument("--seed", default=106524, type=int, help="random seed")
+    parser.add_argument("--seed", default=123456, type=int, help="random seed")
 
     return parser
 
@@ -79,7 +79,7 @@ def set_seed(seed):
 
 def get_dataloader(dataset, args, mode="train"):
     print("  {} dataset length: ".format(mode), len(dataset))
-    if mode.lower() == "train":
+    if mode.lower() == "train1":
         sampler = RandomSampler(dataset)
         batch_size = args.train_batch_size
     else:
@@ -150,7 +150,7 @@ def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_da
             outputs = model(**inputs)
             loss = outputs[0]
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
+            # torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
             optimizer.step()
             scheduler.step()
             optimizer.zero_grad()
@@ -169,9 +169,9 @@ def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_da
         if dev_dataloader is not None:
             score_dict = evaluate(model, args, dev_dataloader, tokenizer, epoch, desc="dev")
             print(" Dev: Epoch=%d, Acc=%.4f\n" % (epoch, score_dict["acc_score"]))
-        if test_dataloader is not None:
-            score_dict = evaluate(model, args, test_dataloader, tokenizer, epoch, desc="test")
-            print(" Test: Epoch=%d, Acc=%.4f\n" % (epoch, score_dict["acc_score"]))
+        if train_dataloader is not None:
+            score_dict = evaluate(model, args, train_dataloader, tokenizer, epoch, desc="train")
+            print(" Train: Epoch=%d, Acc=%.4f\n" % (epoch, score_dict["acc_score"]))
         output_dir = os.path.join(args.output_dir, TIME_CHECKPOINT_DIR)
         output_dir = os.path.join(output_dir, f"{PREFIX_CHECKPOINT_DIR}_{epoch}")
         # os.makedirs(output_dir, exist_ok=True)
@@ -207,16 +207,16 @@ def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=F
         else:
             all_input_ids = np.append(all_input_ids, input_ids, axis=0)
             all_attention_mask = np.append(all_attention_mask, attention_mask, axis=0)
-            all_label_ids = np.append(all_label_ids, label_ids, axis=0)
-            all_pred_ids = np.append(all_pred_ids, pred_ids, axis=0)
+            all_label_ids = np.append(all_label_ids, label_ids)
+            all_pred_ids = np.append(all_pred_ids, pred_ids)
 
     ## evaluation
-    if mode == "train":
-        gold_file = args.train_data_file.replace(".json", ".rel")
-    elif mode == "dev":
-        gold_file = args.dev_data_file.replace(".json", ".rel")
-    elif mode == "test":
-        gold_file = args.test_data_file.replace(".json", ".rel")
+    if desc == "train":
+        gold_file = args.train_data_file.replace(".json", ".rels")
+    elif desc == "dev":
+        gold_file = args.dev_data_file.replace(".json", ".rels")
+    elif desc == "test":
+        gold_file = args.test_data_file.replace(".json", ".rels")
     pred_file = rel_preds_to_file(all_pred_ids, args.label_list, gold_file)
     score_dict = get_accuracy_score(gold_file, pred_file)
 
@@ -240,7 +240,9 @@ def main():
     train_data_file = os.path.join(data_dir, "{}_train.json".format(args.dataset))
     dev_data_file = os.path.join(data_dir, "{}_dev.json".format(args.dataset))
     test_data_file = os.path.join(data_dir, "{}_test.json".format(args.dataset))
-    label_dict, label_list = token_labels_from_file(train_data_file)
+    label_dict, label_list = rel_labels_from_file(train_data_file)
+    args.train_data_file, args.dev_data_file, args.test_data_file = train_data_file, dev_data_file, test_data_file
+    args.label_dict, args.label_list, args.num_labels = label_dict, label_list, len(label_list)
 
     output_dir = os.path.join(args.output_dir, args.dataset)
     output_dir = os.path.join(output_dir, "{}+{}".format(args.model_type, args.encoder_type))
@@ -254,22 +256,22 @@ def main():
             tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
             model = BaseRelClassifier(config=config, args=args)
             dataset_name = "RelDataset"
-
+    model = model.to(args.device)
     dataset_params = {
         "tokenizer": tokenizer,
         "max_seq_length": args.max_seq_length,
         "label_dict": label_dict,
     }
-    dataset_module == __import__("task_dataset")
+    dataset_module = __import__("task_dataset")
     MyDataset = getattr(dataset_module, dataset_name)
 
     if args.do_train:
         train_dataset = MyDataset(train_data_file, params=dataset_params)
         dev_dataset = MyDataset(dev_data_file, params=dataset_params)
         if os.path.exists(test_data_file):
-            test_dataset = None
-        else:
             test_dataset = MyDataset(test_data_file, params=dataset_params)
+        else:
+            test_dataset = None
         train_dataloader = get_dataloader(train_dataset, args, mode="train")
         dev_dataloader = get_dataloader(dev_dataset, args, mode="dev")
         if test_dataset is not None:

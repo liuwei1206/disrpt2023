@@ -39,7 +39,7 @@ def parse_data(infile, string_input=False) -> list:
         data = infile.strip()
 
     labels = [line.split("\t")[-1] for line in data.split("\n") if "\t" in line]
-
+    labels = [l.lower() for l in labels]
     return labels
 
 
@@ -62,6 +62,8 @@ def get_accuracy_score(gold_file, pred_file, string_input=False) -> dict:
     assert len(gold_labels) == len(pred_labels), "FATAL: different number of labels detected in gold and pred"
 
     acc = accuracy_score(gold_labels, pred_labels)
+    # print(gold_labels)
+    # print(pred_labels)
 
     score_dict = {"filename": filename,
                   "acc_score": acc,

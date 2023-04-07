@@ -120,6 +120,8 @@ class RelDataset(Dataset):
                     unit2 = unit_words[1]
                     arg1 = " ".join(unit1)
                     arg2 = " ".join(unit2)
+                    # print(arg1)
+                    # print(arg2)
                     res = self.tokenizer(
                         text=arg1,
                         text_pair=arg2,
@@ -130,17 +132,21 @@ class RelDataset(Dataset):
                     )
                     input_ids = res.input_ids[0]
                     attention_mask = res.attention_mask[0]
-                    label_id = self.label_dict[unit_label]
+                    if unit_label.lower() in self.label_dict:
+                        label_id = self.label_dict[unit_label.lower()]
+                    else:
+                        label_id = 0
 
                     # put together
                     all_input_ids.append(input_ids)
+                    # print(input_ids[:15])
                     all_attention_mask.append(attention_mask)
                     all_label_ids.append(label_id)
 
-        self.input_ids = np.array(all_input_ids)
-        self.attention_mask = np.array(all_attention_mask)
+        self.input_ids = all_input_ids
+        self.attention_mask = all_attention_mask
         self.label_ids = np.array(all_label_ids)
-
+        # print(all_label_ids)
         self.total_size = len(all_input_ids)
 
     def __len__(self):
@@ -148,8 +154,8 @@ class RelDataset(Dataset):
 
     def __getitem__(self, index):
         return (
-            torch.tensor(self.input_ids[index]),
-            torch.tensor(self.attention_mask[index]),
+            self.input_ids[index],
+            self.attention_mask[index],
             torch.tensor(self.label_ids[index]),
         )
 

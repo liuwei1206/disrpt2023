@@ -19,7 +19,8 @@ model_name_or_path = {
 
 class BaseRelClassifier(PreTrainedModel):
     def __init__(self, config, args):
-        super().__init__()
+        super().__init__(config=config)
+
         self.encoder_type = args.encoder_type.lower()
         if self.encoder_type == "roberta":
             self.encoder = RobertaModel.from_pretrained(model_name_or_path["roberta"], config=config)
@@ -52,7 +53,7 @@ class BaseRelClassifier(PreTrainedModel):
             )
 
         sequence_outputs = outputs[0]
-        pooled_outputs = sequence_outputs[:, 0. :]
+        pooled_outputs = sequence_outputs[:, 0, :]
         pooled_outputs = self.dropout(pooled_outputs)
         logits = self.classifier(pooled_outputs) # [B, N, L] or [B, L]
         preds = torch.argmax(logits, dim=-1)
@@ -67,7 +68,8 @@ class BaseRelClassifier(PreTrainedModel):
 
 class BaseSegClassifier(PreTrainedModel):
     def __init__(self, config, args):
-        super().__init__()
+        super().__init__(config=config)
+
         self.encoder_type = args.encoder_type.lower()
         if self.encoder_type == "roberta":
             self.encoder = RobertaModel.from_pretrained(model_name_or_path["roberta"], config=config)
@@ -115,7 +117,8 @@ class BaseSegClassifier(PreTrainedModel):
 
 class BiLSTMCRF(PreTrainedModel):
     def __init__(self, config, args):
-        super().__init__()
+        super().__init__(config=config)
+
         self.encoder_type = args.encoder_type.lower()
         self.num_labels = args.num_labels
         if self.encoder_type == "roberta":
