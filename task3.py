@@ -79,7 +79,7 @@ def set_seed(seed):
 
 def get_dataloader(dataset, args, mode="train"):
     print("  {} dataset length: ".format(mode), len(dataset))
-    if mode.lower() == "train1":
+    if mode.lower() == "train":
         sampler = RandomSampler(dataset)
         batch_size = args.train_batch_size
     else:
@@ -168,10 +168,10 @@ def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_da
         model.eval()
         if dev_dataloader is not None:
             score_dict = evaluate(model, args, dev_dataloader, tokenizer, epoch, desc="dev")
-            print(" Dev: Epoch=%d, Acc=%.4f\n" % (epoch, score_dict["acc_score"]))
-        if train_dataloader is not None:
-            score_dict = evaluate(model, args, train_dataloader, tokenizer, epoch, desc="train")
-            print(" Train: Epoch=%d, Acc=%.4f\n" % (epoch, score_dict["acc_score"]))
+            print("\nDev: Epoch=%d, Acc=%.4f\n" % (epoch, score_dict["acc_score"]))
+        if test_dataloader is not None:
+            score_dict = evaluate(model, args, test_dataloader, tokenizer, epoch, desc="test")
+            print("\nTest: Epoch=%d, Acc=%.4f\n" % (epoch, score_dict["acc_score"]))
         output_dir = os.path.join(args.output_dir, TIME_CHECKPOINT_DIR)
         output_dir = os.path.join(output_dir, f"{PREFIX_CHECKPOINT_DIR}_{epoch}")
         # os.makedirs(output_dir, exist_ok=True)

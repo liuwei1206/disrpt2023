@@ -16,7 +16,7 @@ def token_labels_from_file(file_name):
                         labels.add(l)
     labels = list(labels)
     labels = sorted(labels)
-    print(labels)
+    print(" Total label number: %d\n"%(len(labels)))
     label_dict = {l: idx for idx, l in enumerate(labels)}
 
     return label_dict, labels
@@ -36,8 +36,9 @@ def rel_labels_from_file(file_name):
     labels = list(labels)
     labels = sorted(labels)
     label_dict = {l: idx for idx, l in enumerate(labels)}
-    print(label_dict)
-    print(labels)
+    # print(label_dict)
+    # print(labels)
+    print(" Total label number: %d\n"%(len(labels)))
 
     return label_dict, labels
 
