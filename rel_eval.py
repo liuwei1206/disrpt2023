@@ -39,7 +39,7 @@ def parse_data(infile, string_input=False) -> list:
         data = infile.strip()
 
     labels = [line.split("\t")[-1] for line in data.split("\n") if "\t" in line]
-    labels = [l.lower() for l in labels]
+    # labels = [l.lower() for l in labels]
     return labels
 
 

@@ -40,7 +40,8 @@ class SegDataset(Dataset):
                         tmp_restore_pos.append(len(tmp_sent_tokens))
                         tmp_tokens = self.tokenizer.tokenize(word)
                         tmp_labels = [default_label for _ in range(len(tmp_tokens)-1)]
-                        tmp_labels.insert(0, label.lower()) # we only preserve the first subtoken's label
+                        # tmp_labels.insert(0, label.lower()) # we only preserve the first subtoken's label
+                        tmp_labels.insert(0, label)
                         tmp_sent_tokens.extend(tmp_tokens)
                         tmp_sent_token_labels.extend(tmp_labels)
                     if len(tmp_sent_tokens) > self.max_seq_length-1:
@@ -132,8 +133,8 @@ class RelDataset(Dataset):
                     )
                     input_ids = res.input_ids[0]
                     attention_mask = res.attention_mask[0]
-                    if unit_label.lower() in self.label_dict:
-                        label_id = self.label_dict[unit_label.lower()]
+                    if unit_label in self.label_dict:
+                        label_id = self.label_dict[unit_label]
                     else:
                         label_id = 0
 

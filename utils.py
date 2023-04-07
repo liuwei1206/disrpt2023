@@ -12,7 +12,8 @@ def token_labels_from_file(file_name):
                 doc_sent_token_labels = sample["doc_sent_token_labels"]
                 for sent_token_labels in doc_sent_token_labels:
                     for l in sent_token_labels:
-                        labels.add(l.lower())
+                        # labels.add(l.lower())
+                        labels.add(l)
     labels = list(labels)
     labels = sorted(labels)
     print(labels)
@@ -30,7 +31,8 @@ def rel_labels_from_file(file_name):
                 sample = json.loads(line)
                 doc_unit_labels = sample["doc_unit_labels"]
                 for l in doc_unit_labels:
-                    labels.add(l.lower())
+                    # labels.add(l.lower())
+                    labels.add(l)
     labels = list(labels)
     labels = sorted(labels)
     label_dict = {l: idx for idx, l in enumerate(labels)}
