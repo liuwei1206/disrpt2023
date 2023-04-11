@@ -11,11 +11,8 @@ from torch.nn import CrossEntropyLoss
 from TorchCRF import CRF
 
 from transformers import PreTrainedModel
-from transformers.models.roberta.modeling_roberta import RobertaModel
-
-model_name_or_path = {
-    "roberta": "roberta-base",
-}
+from transformers.models.roberta import RobertaModel
+from transformers.models.bert import BertModel
 
 class BaseRelClassifier(PreTrainedModel):
     def __init__(self, config, args):
@@ -23,7 +20,9 @@ class BaseRelClassifier(PreTrainedModel):
 
         self.encoder_type = args.encoder_type.lower()
         if self.encoder_type == "roberta":
-            self.encoder = RobertaModel.from_pretrained(model_name_or_path["roberta"], config=config)
+            self.encoder = RobertaModel.from_pretrained(args.pretrained_path, config=config)
+        elif self.encoder_type == "bert":
+            self.encoder = BertModel.from_pretrained(args.pretrained_path, config=config)
         self.classifier = nn.Linear(config.hidden_size, args.num_labels)
         self.dropout = nn.Dropout(args.dropout)
         self.num_labels = args.num_labels
@@ -37,6 +36,7 @@ class BaseRelClassifier(PreTrainedModel):
         self,
         input_ids,
         attention_mask=None,
+        token_type_ids=None,
         labels=None,
         flag="Train"
     ):
@@ -44,16 +44,16 @@ class BaseRelClassifier(PreTrainedModel):
             with torch.no_grad():
                 outputs = self.encoder(
                     input_ids=input_ids,
-                    attention_mask=attention_mask
+                    attention_mask=attention_mask,
+                    token_type_ids=token_type_ids,
                 )
         else:
             outputs = self.encoder(
                 input_ids=input_ids,
-                attention_mask=attention_mask
+                attention_mask=attention_mask,
+                token_type_ids=token_type_ids,
             )
-
-        sequence_outputs = outputs[0]
-        pooled_outputs = sequence_outputs[:, 0, :]
+        pooled_outputs = outputs.pooler_output
         pooled_outputs = self.dropout(pooled_outputs)
         logits = self.classifier(pooled_outputs) # [B, N, L] or [B, L]
         preds = torch.argmax(logits, dim=-1)

@@ -16,7 +16,8 @@ from torch.utils.data.sampler import RandomSampler, Sampler, SequentialSampler
 from torch.utils.data.dataloader import DataLoader
 
 from transformers.optimization import AdamW, get_linear_schedule_with_warmup
-from transformers import RobertaConfig, RobertaTokenizer
+from transformers.models.roberta import RobertaConfig, RobertaTokenizer
+from transformers.models.bert import BertConfig, BertTokenizer
 
 from utils import *
 from task_dataset import SegDataset
@@ -51,7 +52,6 @@ def get_argparse():
 
     # for training
     parser.add_argument("--model_type", default="base", type=str, help="roberta-bilstm-crf")
-    parser.add_argument("--encoder_type", default="roberta", type=str, help="roberta, ...")
     parser.add_argument("--do_train", default=False, action="store_true")
     parser.add_argument("--do_dev", default=False, action="store_true")
     parser.add_argument("--do_test", default=False, action="store_true")
@@ -143,7 +143,8 @@ def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_da
             inputs = {
                 "input_ids": batch[0],
                 "attention_mask": batch[1],
-                "labels": batch[2],
+                "token_type_ids": batch[2],
+                "labels": batch[3],
                 "flag": "Train"
             }
 
@@ -187,7 +188,8 @@ def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=F
         inputs = {
             "input_ids": batch[0],
             "attention_mask": batch[1],
-            "labels": batch[2],
+            "token_type_ids": batch[2],
+            "labels": batch[3],
             "flag": "Eval"
         }
         with torch.no_grad():
@@ -196,7 +198,7 @@ def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=F
 
         input_ids = batch[0].detach().cpu().numpy()
         attention_mask = batch[1].detach().cpu().numpy()
-        label_ids = batch[2].detach().cpu().numpy()
+        label_ids = batch[3].detach().cpu().numpy()
         pred_ids = preds.detach().cpu().numpy()
 
         if all_input_ids is None:
@@ -249,11 +251,55 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
     args.output_dir = output_dir
 
+    # 2. prepare pretrained path
+    lang_type = args.dataset.split(".")[0]
+    args.lang_type = lang_type
+    if lang_type.lower() == "deu":
+        encoder_type = "bert"
+        pretrained_path = "bert-base-german-cased"
+    elif lang_type.lower() == "eng":
+        encoder_type = "bert"
+        pretrained_path = "bert-base-cased"
+    elif lang_type.lower() == "eus":
+        encoder_type = "bert"
+        pretrained_path = "ixa-ehu/berteus-base-cased"
+    elif lang_type.lower() == "fas":
+        encoder_type = "bert"
+        pretrained_path = "HooshvareLab/bert-fa-base-uncased"
+    elif lang_type.lower() == "fra":
+        encoder_type = "bert"
+        pretrained_path = "dbmdz/bert-base-french-europeana-cased"
+    elif lang_type.lower() == "nld":
+        encoder_type = "bert"
+        pretrained_path = "GroNLP/bert-base-dutch-cased"
+    elif lang_type.lower() == "por":
+        encoder_type = "bert"
+        pretrained_path = "neuralmind/bert-base-portuguese-cased"
+    elif lang_type.lower() == "rus":
+        encoder_type = "bert"
+        pretrained_path = "DeepPavlov/rubert-base-cased-sentence"
+    elif lang_type.lower() == "spa":
+        encoder_type = "bert"
+        pretrained_path = "dccuchile/bert-base-spanish-wwm-cased"
+    elif lang_type.lower() == "tur":
+        encoder_type = "bert"
+        pretrained_path = "dbmdz/bert-base-turkish-cased"
+    elif lang_type.lower() == "zho":
+        encoder_type = "bert"
+        pretrained_path = "hfl/chinese-bert-wwm-ext"
+    args.encoder_type = encoder_type
+    args.pretrained_path = pretrained_path
+
     # 2.define models
     if args.model_type.lower() == "base":
         if args.encoder_type.lower() == "roberta":
-            config = RobertaConfig.from_pretrained("roberta-base")
-            tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
+            config = RobertaConfig.from_pretrained(args.pretrained_path)
+            tokenizer = RobertaTokenizer.from_pretrained(args.pretrained_path)
+            model = BaseRelClassifier(config=config, args=args)
+            dataset_name = "RelDataset"
+        elif args.encoder.lower() == "bert":
+            config = BertConfig.from_pretrained(args.pretrained_path)
+            tokenizer = BertTokenizer.from_pretrained(args.pretrained_path)
             model = BaseRelClassifier(config=config, args=args)
             dataset_name = "RelDataset"
     model = model.to(args.device)

@@ -107,6 +107,7 @@ class RelDataset(Dataset):
 
         all_input_ids = []
         all_attention_mask = []
+        all_token_type_ids = []
         all_label_ids = []
 
         for text in all_texts:
@@ -133,6 +134,7 @@ class RelDataset(Dataset):
                     )
                     input_ids = res.input_ids[0]
                     attention_mask = res.attention_mask[0]
+                    token_type_ids = res.token_type_ids[0]
                     if unit_label in self.label_dict:
                         label_id = self.label_dict[unit_label]
                     else:
@@ -140,12 +142,13 @@ class RelDataset(Dataset):
 
                     # put together
                     all_input_ids.append(input_ids)
-                    # print(input_ids[:15])
                     all_attention_mask.append(attention_mask)
+                    all_token_type_ids.append(token_type_ids)
                     all_label_ids.append(label_id)
 
         self.input_ids = all_input_ids
         self.attention_mask = all_attention_mask
+        self.token_type_ids = all_token_type_ids
         self.label_ids = np.array(all_label_ids)
         # print(all_label_ids)
         self.total_size = len(all_input_ids)
@@ -157,6 +160,7 @@ class RelDataset(Dataset):
         return (
             self.input_ids[index],
             self.attention_mask[index],
+            self.token_type_ids[index],
             torch.tensor(self.label_ids[index]),
         )
 
