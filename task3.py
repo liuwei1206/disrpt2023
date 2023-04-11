@@ -65,7 +65,7 @@ def get_argparse():
     parser.add_argument("--max_grad_norm", default=2.0, type=float)
     parser.add_argument("--weight_decay", default=0.1, type=float)
     parser.add_argument("--warmup_ratio", default=0.06, type=float)
-    parser.add_argument("--seed", default=123456, type=int, help="random seed")
+    parser.add_argument("--seed", default=106524, type=int, help="random seed")
 
     return parser
 
@@ -150,7 +150,7 @@ def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_da
             outputs = model(**inputs)
             loss = outputs[0]
             loss.backward()
-            # torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
             optimizer.step()
             scheduler.step()
             optimizer.zero_grad()
