@@ -133,6 +133,7 @@ def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_da
     global_step = 0
     tr_loss = 0.0
     logging_loss = 0.0
+    best_dev = 0.0
     train_iterator = trange(1, int(num_train_epochs) + 1, desc="Epoch")
     for epoch in train_iterator:
         epoch_iterator = tqdm(train_dataloader, desc="Iteration")
@@ -151,7 +152,7 @@ def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_da
             outputs = model(**inputs)
             loss = outputs[0]
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
+            # torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
             optimizer.step()
             scheduler.step()
             optimizer.zero_grad()
@@ -167,8 +168,13 @@ def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_da
 
         # 3. evaluate and save
         model.eval()
+        if train_dataloader is not None:
+            score_dict = evaluate(model, args, train_dataloader, tokenizer, epoch, desc="train")
+            print("\nTrain: Epoch=%d, Acc=%.4f\n" % (epoch, score_dict["acc_score"]))
         if dev_dataloader is not None:
             score_dict = evaluate(model, args, dev_dataloader, tokenizer, epoch, desc="dev")
+            if best_dev < score_dict["acc_score"]:
+                best_dev = score_dict["acc_score"]
             print("\nDev: Epoch=%d, Acc=%.4f\n" % (epoch, score_dict["acc_score"]))
         if test_dataloader is not None:
             score_dict = evaluate(model, args, test_dataloader, tokenizer, epoch, desc="test")
@@ -177,6 +183,8 @@ def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_da
         output_dir = os.path.join(output_dir, f"{PREFIX_CHECKPOINT_DIR}_{epoch}")
         # os.makedirs(output_dir, exist_ok=True)
         # torch.save(model.state_dict(), os.path.join(output_dir, "pytorch_model.bin"))
+    print("Best Acc on dev: %.4f\n"%(best_dev))
+
 
 def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=False):
     all_input_ids = None
@@ -213,6 +221,7 @@ def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=F
             all_pred_ids = np.append(all_pred_ids, pred_ids)
 
     ## evaluation
+    """
     if desc == "train":
         gold_file = args.train_data_file.replace(".json", ".rels")
     elif desc == "dev":
@@ -221,8 +230,14 @@ def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=F
         gold_file = args.test_data_file.replace(".json", ".rels")
     pred_file = rel_preds_to_file(all_pred_ids, args.label_list, gold_file)
     score_dict = get_accuracy_score(gold_file, pred_file)
+    """
+    print(all_label_ids[:15])
+    print(all_pred_ids[:15])
+    acc = np.sum(all_label_ids == all_pred_ids) / all_label_ids.shape[0]
+    score_dict = {"acc_score": acc}
 
     return score_dict
+
 
 def main():
     args = get_argparse().parse_args()
@@ -236,22 +251,8 @@ def main():
     logger.info("Training/evaluation parameters %s", args)
     set_seed(args.seed)
 
-    # 1.prepare data
-    data_dir = os.path.join(args.data_dir, args.dataset)
-    args.data_dir = data_dir
-    train_data_file = os.path.join(data_dir, "{}_train.json".format(args.dataset))
-    dev_data_file = os.path.join(data_dir, "{}_dev.json".format(args.dataset))
-    test_data_file = os.path.join(data_dir, "{}_test.json".format(args.dataset))
-    label_dict, label_list = rel_labels_from_file(train_data_file)
-    args.train_data_file, args.dev_data_file, args.test_data_file = train_data_file, dev_data_file, test_data_file
-    args.label_dict, args.label_list, args.num_labels = label_dict, label_list, len(label_list)
-
-    output_dir = os.path.join(args.output_dir, args.dataset)
-    output_dir = os.path.join(output_dir, "{}+{}".format(args.model_type, args.encoder_type))
-    os.makedirs(output_dir, exist_ok=True)
-    args.output_dir = output_dir
-
-    # 2. prepare pretrained path
+    # 1. prepare pretrained path
+    print("Acc on %s"%(args.dataset))
     lang_type = args.dataset.split(".")[0]
     args.lang_type = lang_type
     if lang_type.lower() == "deu":
@@ -282,6 +283,7 @@ def main():
         encoder_type = "bert"
         pretrained_path = "dccuchile/bert-base-spanish-wwm-cased"
     elif lang_type.lower() == "tur":
+        print("+++++++")
         encoder_type = "bert"
         pretrained_path = "dbmdz/bert-base-turkish-cased"
     elif lang_type.lower() == "zho":
@@ -290,14 +292,29 @@ def main():
     args.encoder_type = encoder_type
     args.pretrained_path = pretrained_path
 
-    # 2.define models
+    # 2.prepare data
+    data_dir = os.path.join(args.data_dir, args.dataset)
+    args.data_dir = data_dir
+    train_data_file = os.path.join(data_dir, "{}_train.json".format(args.dataset))
+    dev_data_file = os.path.join(data_dir, "{}_dev.json".format(args.dataset))
+    test_data_file = os.path.join(data_dir, "{}_test.json".format(args.dataset))
+    label_dict, label_list = rel_labels_from_file(train_data_file)
+    args.train_data_file, args.dev_data_file, args.test_data_file = train_data_file, dev_data_file, test_data_file
+    args.label_dict, args.label_list, args.num_labels = label_dict, label_list, len(label_list)
+
+    output_dir = os.path.join(args.output_dir, args.dataset)
+    output_dir = os.path.join(output_dir, "{}+{}".format(args.model_type, args.encoder_type))
+    os.makedirs(output_dir, exist_ok=True)
+    args.output_dir = output_dir
+
+    # 3.define models
     if args.model_type.lower() == "base":
         if args.encoder_type.lower() == "roberta":
             config = RobertaConfig.from_pretrained(args.pretrained_path)
             tokenizer = RobertaTokenizer.from_pretrained(args.pretrained_path)
             model = BaseRelClassifier(config=config, args=args)
             dataset_name = "RelDataset"
-        elif args.encoder.lower() == "bert":
+        elif args.encoder_type.lower() == "bert":
             config = BertConfig.from_pretrained(args.pretrained_path)
             tokenizer = BertTokenizer.from_pretrained(args.pretrained_path)
             model = BaseRelClassifier(config=config, args=args)

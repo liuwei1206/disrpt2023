@@ -1,5 +1,6 @@
 import os
 import json
+from collections import defaultdict
 
 def token_labels_from_file(file_name):
     labels = set()
@@ -16,13 +17,14 @@ def token_labels_from_file(file_name):
                         labels.add(l)
     labels = list(labels)
     labels = sorted(labels)
+    # print(labels)
     print(" Total label number: %d\n"%(len(labels)))
     label_dict = {l: idx for idx, l in enumerate(labels)}
 
     return label_dict, labels
 
 def rel_labels_from_file(file_name):
-    labels = set()
+    label_frequency = defaultdict(int)
     with open(file_name, "r", encoding="utf-8") as f:
         lines = f.readlines()
         for line in lines:
@@ -32,11 +34,15 @@ def rel_labels_from_file(file_name):
                 doc_unit_labels = sample["doc_unit_labels"]
                 for l in doc_unit_labels:
                     # labels.add(l.lower())
-                    labels.add(l)
-    labels = list(labels)
+                    label_frequency[l] += 1
+    labels = []
+    for key in label_frequency:
+        if label_frequency[key] >= 0:
+            labels.append(key)
+    # labels = list(labels)
     labels = sorted(labels)
     label_dict = {l: idx for idx, l in enumerate(labels)}
-    # print(label_dict)
+    print(label_dict)
     # print(labels)
     print(" Total label number: %d\n"%(len(labels)))
 

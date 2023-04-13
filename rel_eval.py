@@ -56,7 +56,8 @@ def get_accuracy_score(gold_file, pred_file, string_input=False) -> dict:
 
     gold_labels = parse_data(gold_file, string_input)
     pred_labels = parse_data(pred_file, string_input)
-
+    # print(gold_labels[:20])
+    # print(pred_labels[:20])
     filename = gold_file.split(os.sep)[-1]
 
     assert len(gold_labels) == len(pred_labels), "FATAL: different number of labels detected in gold and pred"

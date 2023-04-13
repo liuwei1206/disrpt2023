@@ -109,6 +109,7 @@ class RelDataset(Dataset):
         all_attention_mask = []
         all_token_type_ids = []
         all_label_ids = []
+        label_frequency = defaultdict(int)
 
         for text in all_texts:
             text = text.strip()
@@ -118,6 +119,8 @@ class RelDataset(Dataset):
                 doc_unit_labels = sample["doc_unit_labels"]
 
                 for unit_words, unit_label in zip(doc_units, doc_unit_labels):
+                    if unit_label not in self.label_dict:
+                        continue
                     unit1 = unit_words[0]
                     unit2 = unit_words[1]
                     arg1 = " ".join(unit1)
@@ -135,6 +138,7 @@ class RelDataset(Dataset):
                     input_ids = res.input_ids[0]
                     attention_mask = res.attention_mask[0]
                     token_type_ids = res.token_type_ids[0]
+                    label_frequency[unit_label] += 1
                     if unit_label in self.label_dict:
                         label_id = self.label_dict[unit_label]
                     else:
@@ -151,6 +155,7 @@ class RelDataset(Dataset):
         self.token_type_ids = all_token_type_ids
         self.label_ids = np.array(all_label_ids)
         # print(all_label_ids)
+        print(label_frequency)
         self.total_size = len(all_input_ids)
 
     def __len__(self):
