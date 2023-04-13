@@ -174,7 +174,7 @@ def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_da
         # os.makedirs(output_dir, exist_ok=True)
         # torch.save(model.state_dict(), os.path.join(output_dir, "pytorch_model.bin"))
 
-def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=False):
+def evaluate(model, args, dataloader, tokenizer, epoch, gold_file, desc="dev", write_file=False):
     all_input_ids = None
     all_attention_mask = None
     all_label_ids = None
@@ -194,21 +194,25 @@ def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=F
         input_ids = batch[0].detach().cpu().numpy()
         attention_mask = batch[1].detach().cpu().numpy()
         label_ids = batch[2].detach().cpu().numpy()
-        pred_ids = preds.detach().cpu().numpy()
+        pred_ids = torch.tensor(preds).detach().cpu().numpy()
 
         if all_input_ids is None:
             all_input_ids = input_ids
             all_attention_mask = attention_mask
             all_label_ids = label_ids
-            all_pred_ids = pred_ids
+            all_pred_ids = outputs
         else:
             all_input_ids = np.append(all_input_ids, input_ids, axis=0)
             all_attention_mask = np.append(all_attention_mask, attention_mask, axis=0)
             all_label_ids = np.append(all_label_ids, label_ids, axis=0)
-            all_pred_ids = np.append(all_pred_ids, pred_ids, axis=0)
+            all_pred_ids = np.append(all_pred_ids, outputs, axis=0)
 
-    ## evaluation
+        ## evaluation
+    label_dict, label_id_dict, labels = token_labels_from_file(gold_file)
+    # output a file for testing
+    seg_preds_to_file(all_input_ids, all_pred_ids, all_attention_mask, label_id_dict, gold_file)
 
+    return all_input_ids, all_attention_mask, all_pred_ids
 
 def main():
     args = get_argparse().parse_args()
