@@ -72,7 +72,7 @@ class BaseSegClassifier(PreTrainedModel):
 
         self.encoder_type = args.encoder_type.lower()
         if self.encoder_type == "roberta":
-            self.encoder = RobertaModel.from_pretrained(model_name_or_path["roberta"], config=config)
+            self.encoder = RobertaModel.from_pretrained("roberta-base", config=config)
         self.classifier = nn.Linear(config.hidden_size, args.num_labels)
         self.dropout = nn.Dropout(args.dropout)
         self.num_labels = args.num_labels

@@ -21,6 +21,7 @@ from transformers import RobertaConfig, RobertaTokenizer
 from utils import *
 from task_dataset import SegDataset
 from models import *
+from seg_eval import get_scores
 
 # set logger, print to console and write to file
 logger = logging.getLogger(__name__)
@@ -165,16 +166,21 @@ def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_da
 
         # 3. evaluate and save
         model.eval()
+        if train_dataloader is not None:
+            score_dict = evaluate(model, args, train_dataloader, tokenizer, epoch, desc="train")
+            print("\nTrain: Epoch=%d, F1=%.4f\n"%(epoch, score_dict["f_score"]))
         if dev_dataloader is not None:
-            evaluate(model, args, dev_dataloader, tokenizer, epoch, desc="dev")
+            score_dict = evaluate(model, args, dev_dataloader, tokenizer, epoch, desc="dev")
+            print("\nDev: Epoch=%d, F1=%.4f\n"%(epoch, score_dict["f_score"]))
         if test_dataloader is not None:
-            evaluate(model, args, test_dataloader, tokenizer, epoch, desc="test")
+            score_dict = evaluate(model, args, test_dataloader, tokenizer, epoch, desc="test")
+            print("\nTest: Epoch=%d, F1=%.4f\n"%(epoch, score_dict["f_score"]))
         output_dir = os.path.join(args.output_dir, TIME_CHECKPOINT_DIR)
         output_dir = os.path.join(output_dir, f"{PREFIX_CHECKPOINT_DIR}_{epoch}")
         # os.makedirs(output_dir, exist_ok=True)
         # torch.save(model.state_dict(), os.path.join(output_dir, "pytorch_model.bin"))
 
-def evaluate(model, args, dataloader, tokenizer, epoch, gold_file, desc="dev", write_file=False):
+def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=False):
     all_input_ids = None
     all_attention_mask = None
     all_label_ids = None
@@ -194,25 +200,31 @@ def evaluate(model, args, dataloader, tokenizer, epoch, gold_file, desc="dev", w
         input_ids = batch[0].detach().cpu().numpy()
         attention_mask = batch[1].detach().cpu().numpy()
         label_ids = batch[2].detach().cpu().numpy()
-        pred_ids = torch.tensor(preds).detach().cpu().numpy()
+        pred_ids = preds.detach().cpu().numpy()
 
         if all_input_ids is None:
             all_input_ids = input_ids
             all_attention_mask = attention_mask
             all_label_ids = label_ids
-            all_pred_ids = outputs
+            all_pred_ids = pred_ids
         else:
             all_input_ids = np.append(all_input_ids, input_ids, axis=0)
             all_attention_mask = np.append(all_attention_mask, attention_mask, axis=0)
             all_label_ids = np.append(all_label_ids, label_ids, axis=0)
-            all_pred_ids = np.append(all_pred_ids, outputs, axis=0)
+            all_pred_ids = np.append(all_pred_ids, pred_ids, axis=0)
 
-        ## evaluation
-    label_dict, label_id_dict, labels = token_labels_from_file(gold_file)
-    # output a file for testing
-    seg_preds_to_file(all_input_ids, all_pred_ids, all_attention_mask, label_id_dict, gold_file)
-
-    return all_input_ids, all_attention_mask, all_pred_ids
+    ## evaluation
+    if desc == "train":
+        gold_file = args.train_data_file.replace(".json", ".tok")
+    elif desc == "dev":
+        gold_file = args.dev_data_file.replace(".json", ".tok")
+    elif desc == "test":
+        gold_file = args.test_data_file.replace(".json", ".tok")
+    print(all_pred_ids)
+    pred_file = seg_preds_to_file(all_input_ids, all_pred_ids, all_attention_mask, args.tokenizer, args.label_list, gold_file)
+    score_dict = get_scores(gold_file, pred_file)
+ 
+    return score_dict
 
 def main():
     args = get_argparse().parse_args()
@@ -229,10 +241,12 @@ def main():
     # 1.prepare data
     data_dir = os.path.join(args.data_dir, args.dataset)
     args.data_dir = data_dir
-    train_data_file = os.path.join(data_dir, "train.json")
-    dev_data_file = os.path.join(data_dir, "dev.json")
-    test_data_file = os.path.join(data_dir, "test.json")
+    train_data_file = os.path.join(data_dir, "{}_train.json".format(args.dataset))
+    dev_data_file = os.path.join(data_dir, "{}_dev.json".format(args.dataset))
+    test_data_file = os.path.join(data_dir, "{}_test.json".format(args.dataset))
     label_dict, label_list = token_labels_from_file(train_data_file)
+    args.train_data_file, args.dev_data_file, args.test_data_file = train_data_file, dev_data_file, test_data_file
+    args.label_dict, args.label_list, args.num_labels = label_dict, label_list, len(label_list)
 
     output_dir = os.path.join(args.output_dir, args.dataset)
     output_dir = os.path.join(output_dir, "{}+{}".format(args.model_type, args.encoder_type))
@@ -252,22 +266,24 @@ def main():
             tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
             model = BiLSTMCRF(config=config, args=args)
             dataset_name = "SegDataset"
-
+    model = model.to(args.device)
+    args.tokenizer = tokenizer
     dataset_params = {
         "tokenizer": tokenizer,
         "max_seq_length": args.max_seq_length,
         "label_dict": label_dict,
     }
-    dataset_module == __import__("task_dataset")
+    dataset_module = __import__("task_dataset")
     MyDataset = getattr(dataset_module, dataset_name)
 
     if args.do_train:
         train_dataset = MyDataset(train_data_file, params=dataset_params)
         dev_dataset = MyDataset(dev_data_file, params=dataset_params)
+        print(test_data_file)
         if os.path.exists(test_data_file):
-            test_dataset = None
-        else:
             test_dataset = MyDataset(test_data_file, params=dataset_params)
+        else:
+            test_dataset = None
         train_dataloader = get_dataloader(train_dataset, args, mode="train")
         dev_dataloader = get_dataloader(dev_dataset, args, mode="dev")
         if test_dataset is not None:

@@ -19,8 +19,8 @@ def token_labels_from_file(file_name):
     labels = sorted(labels)
     print(" Total label number: %d\n"%(len(labels)))
     label_dict = {l: idx for idx, l in enumerate(labels)}
-    label_id_dict = {idx: l for idx, l in enumerate(labels)}
-    return label_dict, label_id_dict, labels
+    # label_id_dict = {idx: l for idx, l in enumerate(labels)}
+    return label_dict, labels
 
 def rel_labels_from_file(file_name):
     label_frequency = defaultdict(int)
@@ -47,7 +47,7 @@ def rel_labels_from_file(file_name):
 
     return label_dict, labels
 
-def seg_preds_to_file(all_pred_ids, all_label_ids, all_attention_mask, label_id_dict, gold_file):
+def seg_preds_to_file(all_pred_ids, all_label_ids, all_attention_mask, tokenizer, label_id_dict, gold_file):
     """
     convert prediction ids to labels, and save the results into a file with the same format as gold_file
     Args:
@@ -57,6 +57,7 @@ def seg_preds_to_file(all_pred_ids, all_label_ids, all_attention_mask, label_id_
         label_id_dict: the dictionary map the labels' id to the original string label
         gold_file: the original .tok file
     """
+    print(all_label_ids)
     all_doc_data = []
     new_doc_data = []
     with open(gold_file, "r", encoding="utf-8") as f:
@@ -101,6 +102,8 @@ def seg_preds_to_file(all_pred_ids, all_label_ids, all_attention_mask, label_id_
                 f.write(line + "\n")
             else:
                 f.write(line)
+
+    return pred_file
 
 def rel_preds_to_file(pred_ids, label_list, gold_file):
     pred_labels = [label_list[id] for id in pred_ids]

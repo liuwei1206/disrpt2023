@@ -61,26 +61,24 @@ class SegDataset(Dataset):
                     self.sents.append(temp_sent)
                     self.labels.append(temp_label)
 
-                    # convert to ids
-                    tmp_tok_ids = self.tokenizer.convert_tokens_to_ids(temp_sent)
-                    tmp_label_ids = [self.label_dict[l] for l in temp_label]
+                # convert to ids
+                tmp_tok_ids = self.tokenizer.convert_tokens_to_ids(temp_sent)
+                tmp_label_ids = [self.label_dict[l] for l in temp_label]
+                assert len(tmp_tok_ids) == len(tmp_label_ids), (len(tmp_tok_ids), len(tmp_label_ids))
 
-                    assert len(tmp_tok_ids) == len(tmp_label_ids), (len(tmp_tok_ids), len(tmp_label_ids))
+                # unify the sequence length
+                input_ids = np.ones(self.max_seq_length, dtype=np.int32)
+                attention_mask = np.zeros(self.max_seq_length, dtype=np.int32)
+                label_ids = np.ones(self.max_seq_length, dtype=np.int32)
+                input_ids = input_ids * self.tokenizer.pad_token_id
+                input_ids[:len(tmp_tok_ids)] = tmp_tok_ids
+                attention_mask[:len(tmp_tok_ids)] = 1
+                label_ids[:len(tmp_label_ids)] = tmp_label_ids
 
-                    # unify the sequence length
-                    input_ids = np.ones(self.max_seq_length, dtype=np.int)
-                    attention_mask = np.zeros(self.max_seq_length, dtype=np.int)
-                    label_ids = np.ones(self.max_seq_length, dtype=np.int)
-
-                    input_ids = input_ids * self.tokenizer.pad_token_id
-                    input_ids[:len(tmp_tok_ids)] = tmp_tok_ids
-                    attention_mask[:len(tmp_tok_ids)] = 1
-                    label_ids[:len(tmp_label_ids)] = tmp_label_ids
-
-                    # put together
-                    tmp_sent_token_ids.append(input_ids)
-                    tmp_label_ids_list.append(label_ids)
-                    tmp_masks.append(attention_mask)
+                # put together
+                tmp_sent_token_ids.append(input_ids)
+                tmp_label_ids_list.append(label_ids)
+                tmp_masks.append(attention_mask)
 
                 tmp_words, tmp_labels = [], []
 
@@ -94,7 +92,11 @@ class SegDataset(Dataset):
 
     def __getitem__(self, index):
         mask = (self.attention_mask[index] > 0)
-        return self.input_ids[index], mask, self.label_ids[index]
+        return (
+            torch.tensor(self.input_ids[index]).long(), 
+            torch.tensor(mask).long(), 
+            torch.tensor(self.label_ids[index]).long()
+        )
 
 
 class RelDataset(Dataset):
