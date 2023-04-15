@@ -270,6 +270,9 @@ def main():
     elif lang_type.lower() == "fra":
         encoder_type = "bert"
         pretrained_path = "dbmdz/bert-base-french-europeana-cased"
+    elif lang_type.lower() == "ita":
+        encoder_type = "bert"
+        pretrained_path = "dbmdz/bert-base-italian-cased"
     elif lang_type.lower() == "nld":
         encoder_type = "bert"
         pretrained_path = "GroNLP/bert-base-dutch-cased"
@@ -283,7 +286,6 @@ def main():
         encoder_type = "bert"
         pretrained_path = "dccuchile/bert-base-spanish-wwm-cased"
     elif lang_type.lower() == "tur":
-        print("+++++++")
         encoder_type = "bert"
         pretrained_path = "dbmdz/bert-base-turkish-cased"
     elif lang_type.lower() == "zho":
