@@ -8,7 +8,8 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 from torch.nn import CrossEntropyLoss
-from TorchCRF import CRF
+# I modified the name of the pakege from TorchCRF to torchcrf, since my computer has only this version of crf...
+from torchcrf import CRF
 
 from transformers import PreTrainedModel
 from transformers.models.roberta import RobertaModel
