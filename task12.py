@@ -79,7 +79,7 @@ def set_seed(seed):
 
 def get_dataloader(dataset, args, mode="train"):
     print("  {} dataset length: ".format(mode), len(dataset))
-    if mode.lower() == "train":
+    if mode.lower() == "train1":
         sampler = RandomSampler(dataset)
         batch_size = args.train_batch_size
     else:
@@ -220,7 +220,7 @@ def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=F
         gold_file = args.dev_data_file.replace(".json", ".tok")
     elif desc == "test":
         gold_file = args.test_data_file.replace(".json", ".tok")
-    print(all_pred_ids)
+    # print(all_pred_ids)
     pred_file = seg_preds_to_file(all_input_ids, all_pred_ids, all_attention_mask, args.tokenizer, args.label_list, gold_file)
     score_dict = get_scores(gold_file, pred_file)
  

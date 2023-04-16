@@ -3,3 +3,4 @@ data
 test.py
 *.log
 .idea
+test

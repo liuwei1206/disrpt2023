@@ -136,6 +136,8 @@ def get_scores(gold_file, pred_file, string_input=False):
 	report = ""
 	gold_tokens, gold_labels, gold_spans = parse_data(gold_file, string_input)
 	pred_tokens, pred_labels, pred_spans = parse_data(pred_file, string_input)
+	# print(gold_spans)
+	# print(pred_spans)
 
 	if os.path.isfile(gold_file):
 		doc_name = os.path.basename(gold_file)

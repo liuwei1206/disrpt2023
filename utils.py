@@ -57,7 +57,7 @@ def seg_preds_to_file(all_pred_ids, all_label_ids, all_attention_mask, tokenizer
         label_id_dict: the dictionary map the labels' id to the original string label
         gold_file: the original .tok file
     """
-    print(all_label_ids)
+    # print(all_label_ids)
     all_doc_data = []
     new_doc_data = []
     with open(gold_file, "r", encoding="utf-8") as f:
@@ -96,6 +96,7 @@ def seg_preds_to_file(all_pred_ids, all_label_ids, all_attention_mask, tokenizer
             new_doc_data.append('\n')
 
     pred_file = gold_file.replace(".tok", "_pred.tok")
+    print(pred_file)
     with open(pred_file,"w") as f:
         for line in new_doc_data:
             if line[-1:] != "\n":
