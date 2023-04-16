@@ -4,7 +4,8 @@
 # <<"COMMENT"
 python3 task3.py --do_train \
                  --dataset="eng.test" \
-                 --max_seq_length=384 \
+                 --feature_size=134 \
+                 --max_seq_length=128 \
                  --train_batch_size=16 \
                  --eval_batch_size=32 \
                  --learning_rate=1e-4 \

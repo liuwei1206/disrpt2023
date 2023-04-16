@@ -56,7 +56,7 @@ class BaseRelClassifier(PreTrainedModel):
             )
         pooled_outputs = outputs.pooler_output
         if features is not None:
-            pooled_outputs = torch.cat(pooled_outputs, features, dim=-1)
+            pooled_outputs = torch.cat((pooled_outputs, features), dim=-1)
         pooled_outputs = self.dropout(pooled_outputs)
         logits = self.classifier(pooled_outputs) # [B, N, L] or [B, L]
         preds = torch.argmax(logits, dim=-1)

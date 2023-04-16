@@ -118,7 +118,7 @@ class RelDataset(Dataset):
         all_sim_features = []
         all_label_ids = []
         label_frequency = defaultdict(int)
-        all_connectives = open("data/dataset/connectives.txt", "r", encoding="utf-8").readlines().split("\n")
+        all_connectives = open("data/dataset/connectives.txt", "r", encoding="utf-8").readlines()
         all_connectives = [conn.strip() for conn in all_connectives]
         conn_reps = encode_words(all_connectives, self.encoder, self.tokenizer, 10)
 

@@ -49,6 +49,7 @@ def get_argparse():
     parser.add_argument("--data_dir", default="data/dataset", type=str)
     parser.add_argument("--dataset", default="pdtb2", type=str, help="pdtb2, pdtb3")
     parser.add_argument("--output_dir", default="data/result", type=str)
+    parser.add_argument("--feature_size", default=0, type=int)
 
     # for training
     parser.add_argument("--model_type", default="base", type=str, help="roberta-bilstm-crf")
@@ -316,18 +317,22 @@ def main():
         if args.encoder_type.lower() == "roberta":
             config = RobertaConfig.from_pretrained(args.pretrained_path)
             tokenizer = RobertaTokenizer.from_pretrained(args.pretrained_path)
+            encoder = RobertaModel.from_pretrained(args.pretrained_path)
             model = BaseRelClassifier(config=config, args=args)
             dataset_name = "RelDataset"
         elif args.encoder_type.lower() == "bert":
             config = BertConfig.from_pretrained(args.pretrained_path)
             tokenizer = BertTokenizer.from_pretrained(args.pretrained_path)
+            encoder = BertModel.from_pretrained(args.pretrained_path)
             model = BaseRelClassifier(config=config, args=args)
             dataset_name = "RelDataset"
+    encoder = encoder.to(args.device)
     model = model.to(args.device)
     dataset_params = {
         "tokenizer": tokenizer,
         "max_seq_length": args.max_seq_length,
         "label_dict": label_dict,
+        "encoder": encoder,
     }
     dataset_module = __import__("task_dataset")
     MyDataset = getattr(dataset_module, dataset_name)

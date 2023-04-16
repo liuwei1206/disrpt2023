@@ -151,11 +151,12 @@ def encode_words(word_list, encoder, tokenizer, max_length=6):
     attention_mask = res.attention_mask
     token_type_ids = res.token_type_ids
     inputs = {
-        "input_ids": input_ids,
-        "attention_mask": attention_mask,
-        "token_type_ids": token_type_ids
+        "input_ids": input_ids.to(encoder.device),
+        "attention_mask": attention_mask.to(encoder.device),
+        "token_type_ids": token_type_ids.to(encoder.device),
     }
-    outputs = encoder(**inputs)
+    with torch.no_grad():
+        outputs = encoder(**inputs)
     word_reps = outputs.pooler_output
     return word_reps
 
@@ -188,25 +189,49 @@ def get_similarity_features(word_list1, word_list2, conn_reps, encoder, tokenize
     # 1.2 maximized similarity
     word1_to_arg2_scores = 1 - F.cosine_similarity(centroid_rep_1, word_reps_2, dim=1) # [N1]
     word2_to_arg1_scores = 1 - F.cosine_similarity(centroid_rep_2, word_reps_1, dim=1) # [N2]
-    top5_1to2_scores = torch.topk(word1_to_arg2_scores, k=5)
-    top5_2to1_scores = torch.topk(word2_to_arg1_scores, k=5)
-    avg_top1_1to2_score = top5_1to2_scores[0]
-    avg_top1_2to1_score = top5_2to1_scores[0]
-    avg_top2_1to2_score = torch.mean(top5_1to2_scores[:2])
-    avg_top2_2to1_score = torch.mean(top5_2to1_scores[:2])
-    avg_top3_1to2_score = torch.mean(top5_1to2_scores[:3])
-    avg_top3_2to1_score = torch.mean(top5_2to1_scores[:3])
-    avg_top5_1to2_score = torch.mean(top5_1to2_scores[:5])
-    avg_top5_2to1_score = torch.mean(top5_2to1_scores[:5])
+    avg_top1_1to2_score = torch.max(word1_to_arg2_scores)
+    avg_top1_2to1_score = torch.max(word2_to_arg1_scores)
+    if word1_to_arg2_scores.size(0) > 1:
+        top2_1to2_scores = torch.topk(word1_to_arg2_scores, k=2)[0]
+        avg_top2_1to2_score = torch.mean(top2_1to2_scores)
+    else:
+        avg_top2_1to2_score = 0.0
+    if len(word1_to_arg2_scores) > 2:
+        top3_1to2_scores = torch.topk(word1_to_arg2_scores, k=3)[0]
+        avg_top3_1to2_score = torch.mean(top3_1to2_scores)
+    else:
+        avg_top3_1to2_score = 0.0
+    if len(word1_to_arg2_scores) > 4:
+        top5_1to2_scores = torch.topk(word1_to_arg2_scores, k=5)[0]
+        avg_top5_1to2_score = torch.mean(top5_1to2_scores)
+    else:
+        avg_top5_1to2_score = 0.0
+    if len(word2_to_arg1_scores) > 1:
+        top2_2to1_scores = torch.topk(word2_to_arg1_scores, k=2)[0]
+        avg_top2_2to1_score = torch.mean(top2_2to1_scores)
+    else:
+        avg_top2_2to1_score = 0.0
+    if len(word2_to_arg1_scores) > 2:
+        top3_2to1_scores = torch.topk(word2_to_arg1_scores, k=3)[0]
+        avg_top3_2to1_score = torch.mean(top3_2to1_scores)
+    else:
+        avg_top3_2to1_score = 0.0
+    if len(word2_to_arg1_scores) > 4:
+        top5_2to1_scores = torch.topk(word2_to_arg1_scores, k=5)[0]
+        avg_top5_2to1_score = torch.mean(top5_2to1_scores)
+    else:
+        avg_top5_2to1_score = 0.0
 
     # 1.3 aligned similarity
     fenzi = torch.matmul(word_reps_1, word_reps_2.transpose(1, 0))
     fenmu = torch.norm(word_reps_1, p=2, dim=1).unsqueeze(1) * torch.norm(word_reps_2, p=2, dim=1)
     word1_word2_scores = 1 - fenzi / fenmu # [N1, N2]
-    avg_word1_word2_score = torch.mean(torch.max(word1_word2_scores).values)
+    # print(torch.max(word1_word2_scores, dim=-1))
+    avg_word1_word2_score = torch.mean(torch.max(word1_word2_scores, dim=-1)[0])
 
     # 1.4 conn similarity
-    centroid_to_conn_scores = 1 - F.cosine_similarity(centroid_rep, word_reps, dim=1) # [N1]
+    centroid_to_conn_scores = 1 - F.cosine_similarity(centroid_rep, conn_reps, dim=1) # [N1]
+    centroid_to_conn_scores = centroid_to_conn_scores.detach().cpu()
 
     ## 2. merge features
     features = []
@@ -220,9 +245,9 @@ def get_similarity_features(word_list1, word_list2, conn_reps, encoder, tokenize
     features.append(avg_top5_1to2_score)
     features.append(avg_top5_2to1_score)
     features.append(avg_word1_word2_score)
-    features += centroid_to_conn_scores
-    print(len(features))
     features = torch.tensor(features)
+    features = torch.cat((features, centroid_to_conn_scores), dim=-1)
+    # print(features.size())
 
     return features
 
