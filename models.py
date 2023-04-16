@@ -23,7 +23,7 @@ class BaseRelClassifier(PreTrainedModel):
             self.encoder = RobertaModel.from_pretrained(args.pretrained_path, config=config)
         elif self.encoder_type == "bert":
             self.encoder = BertModel.from_pretrained(args.pretrained_path, config=config)
-        self.classifier = nn.Linear(config.hidden_size, args.num_labels)
+        self.classifier = nn.Linear(config.hidden_size+args.feature_size, args.num_labels)
         self.dropout = nn.Dropout(args.dropout)
         self.num_labels = args.num_labels
         self.do_freeze = args.do_freeze
@@ -37,6 +37,7 @@ class BaseRelClassifier(PreTrainedModel):
         input_ids,
         attention_mask=None,
         token_type_ids=None,
+        features=None,
         labels=None,
         flag="Train"
     ):
@@ -54,6 +55,8 @@ class BaseRelClassifier(PreTrainedModel):
                 token_type_ids=token_type_ids,
             )
         pooled_outputs = outputs.pooler_output
+        if features is not None:
+            pooled_outputs = torch.cat(pooled_outputs, features, dim=-1)
         pooled_outputs = self.dropout(pooled_outputs)
         logits = self.classifier(pooled_outputs) # [B, N, L] or [B, L]
         preds = torch.argmax(logits, dim=-1)

@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 from collections import defaultdict
-
+from utils import encode_words, get_similarity_features
 
 class SegDataset(Dataset):
     '''Generate the dataset for task1 Segmentation'''
@@ -104,6 +104,7 @@ class RelDataset(Dataset):
         self.max_seq_length = params["max_seq_length"]
         self.tokenizer = params["tokenizer"]
         self.label_dict = params["label_dict"]
+        self.encoder = params["encoder"]
 
         self._init_dataset(file_name)
 
@@ -114,8 +115,12 @@ class RelDataset(Dataset):
         all_input_ids = []
         all_attention_mask = []
         all_token_type_ids = []
+        all_sim_features = []
         all_label_ids = []
         label_frequency = defaultdict(int)
+        all_connectives = open("data/dataset/connectives.txt", "r", encoding="utf-8").readlines().split("\n")
+        all_connectives = [conn.strip() for conn in all_connectives]
+        conn_reps = encode_words(all_connectives, self.encoder, self.tokenizer, 10)
 
         for text in all_texts:
             text = text.strip()
@@ -129,10 +134,10 @@ class RelDataset(Dataset):
                         continue
                     unit1 = unit_words[0]
                     unit2 = unit_words[1]
+                    sim_features = get_similarity_features(unit1, unit2, conn_reps, self.encoder, self.tokenizer)
+
                     arg1 = " ".join(unit1)
                     arg2 = " ".join(unit2)
-                    # print(arg1)
-                    # print(arg2)
                     res = self.tokenizer(
                         text=arg1,
                         text_pair=arg2,
@@ -151,11 +156,13 @@ class RelDataset(Dataset):
                         label_id = 0
 
                     # put together
+                    all_sim_features.append(sim_features)
                     all_input_ids.append(input_ids)
                     all_attention_mask.append(attention_mask)
                     all_token_type_ids.append(token_type_ids)
                     all_label_ids.append(label_id)
 
+        self.sim_features = all_sim_features
         self.input_ids = all_input_ids
         self.attention_mask = all_attention_mask
         self.token_type_ids = all_token_type_ids
@@ -173,6 +180,7 @@ class RelDataset(Dataset):
             self.attention_mask[index],
             self.token_type_ids[index],
             torch.tensor(self.label_ids[index]),
+            self.sim_features[index],
         )
 
 

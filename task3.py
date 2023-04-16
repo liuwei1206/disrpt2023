@@ -145,6 +145,7 @@ def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_da
                 "input_ids": batch[0],
                 "attention_mask": batch[1],
                 "token_type_ids": batch[2],
+                "features": batch[4],
                 "labels": batch[3],
                 "flag": "Train"
             }
@@ -197,6 +198,7 @@ def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=F
             "input_ids": batch[0],
             "attention_mask": batch[1],
             "token_type_ids": batch[2],
+            "features": batch[4],
             "labels": batch[3],
             "flag": "Eval"
         }

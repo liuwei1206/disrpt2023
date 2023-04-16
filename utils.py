@@ -2,6 +2,9 @@ import os
 import json
 from collections import defaultdict
 
+import torch
+import torch.nn.functional as F
+
 def token_labels_from_file(file_name):
     labels = set()
     with open(file_name, "r", encoding="utf-8") as f:
@@ -134,5 +137,93 @@ def rel_preds_to_file(pred_ids, label_list, gold_file):
             f.write("%s\n"%(text))
 
     return pred_file
+
+
+def encode_words(word_list, encoder, tokenizer, max_length=6):
+    res = tokenizer(
+        text=word_list,
+        padding="max_length",
+        truncation=True,
+        max_length=max_length, # I guess 6 is enough
+        return_tensors="pt"
+    )
+    input_ids = res.input_ids
+    attention_mask = res.attention_mask
+    token_type_ids = res.token_type_ids
+    inputs = {
+        "input_ids": input_ids,
+        "attention_mask": attention_mask,
+        "token_type_ids": token_type_ids
+    }
+    outputs = encoder(**inputs)
+    word_reps = outputs.pooler_output
+    return word_reps
+
+def get_similarity_features(word_list1, word_list2, conn_reps, encoder, tokenizer):
+    """
+    refer to paper: Discourse Relation Sense Classification Using Cross-argument Semantic Similarity Based on Word Embeddings
+    Args:
+        word_list1:
+        word_list2:
+        conn_reps:
+        encoder:
+        tokenizer:
+    Returns:
+        features:
+    """
+    word_num1 = len(word_list1)
+    word_num2 = len(word_list2)
+    word_list = word_list1 + word_list2
+    word_reps = encode_words(word_list, encoder, tokenizer)
+    word_reps_1 = word_reps[:word_num1, :] # [N1, D]
+    word_reps_2 = word_reps[word_num1:, :] # [N2, D]
+    centroid_rep = torch.mean(word_reps, dim=0) # [D]
+    centroid_rep_1 = torch.mean(word_reps_1, dim=0) # [D]
+    centroid_rep_2 = torch.mean(word_reps_2, dim=0) # [D]
+
+    # 1. calculate similarities
+    # 1.1 arg1 to arg2 similarities
+    arg1_arg2_score = 1 - F.cosine_similarity(centroid_rep_1, centroid_rep_2, dim=0)
+
+    # 1.2 maximized similarity
+    word1_to_arg2_scores = 1 - F.cosine_similarity(centroid_rep_1, word_reps_2, dim=1) # [N1]
+    word2_to_arg1_scores = 1 - F.cosine_similarity(centroid_rep_2, word_reps_1, dim=1) # [N2]
+    top5_1to2_scores = torch.topk(word1_to_arg2_scores, k=5)
+    top5_2to1_scores = torch.topk(word2_to_arg1_scores, k=5)
+    avg_top1_1to2_score = top5_1to2_scores[0]
+    avg_top1_2to1_score = top5_2to1_scores[0]
+    avg_top2_1to2_score = torch.mean(top5_1to2_scores[:2])
+    avg_top2_2to1_score = torch.mean(top5_2to1_scores[:2])
+    avg_top3_1to2_score = torch.mean(top5_1to2_scores[:3])
+    avg_top3_2to1_score = torch.mean(top5_2to1_scores[:3])
+    avg_top5_1to2_score = torch.mean(top5_1to2_scores[:5])
+    avg_top5_2to1_score = torch.mean(top5_2to1_scores[:5])
+
+    # 1.3 aligned similarity
+    fenzi = torch.matmul(word_reps_1, word_reps_2.transpose(1, 0))
+    fenmu = torch.norm(word_reps_1, p=2, dim=1).unsqueeze(1) * torch.norm(word_reps_2, p=2, dim=1)
+    word1_word2_scores = 1 - fenzi / fenmu # [N1, N2]
+    avg_word1_word2_score = torch.mean(torch.max(word1_word2_scores).values)
+
+    # 1.4 conn similarity
+    centroid_to_conn_scores = 1 - F.cosine_similarity(centroid_rep, word_reps, dim=1) # [N1]
+
+    ## 2. merge features
+    features = []
+    features.append(arg1_arg2_score)
+    features.append(avg_top1_1to2_score)
+    features.append(avg_top1_2to1_score)
+    features.append(avg_top2_1to2_score)
+    features.append(avg_top2_2to1_score)
+    features.append(avg_top3_1to2_score)
+    features.append(avg_top3_2to1_score)
+    features.append(avg_top5_1to2_score)
+    features.append(avg_top5_2to1_score)
+    features.append(avg_word1_word2_score)
+    features += centroid_to_conn_scores
+    print(len(features))
+    features = torch.tensor(features)
+
+    return features
 
 
