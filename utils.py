@@ -153,9 +153,9 @@ def encode_words(word_list, encoder, tokenizer, max_length=6):
     attention_mask = res.attention_mask
     token_type_ids = res.token_type_ids
     inputs = {
-        "input_ids": input_ids,
-        "attention_mask": attention_mask,
-        "token_type_ids": token_type_ids
+        "input_ids": input_ids.to(encoder.device),
+        "attention_mask": attention_mask.to(encoder.device),
+        "token_type_ids": token_type_ids.to(encoder.device),
     }
     outputs = encoder(**inputs)
     word_reps = outputs.pooler_output
@@ -223,7 +223,7 @@ def get_similarity_features(word_list1, word_list2, conn_reps, encoder, tokenize
     features.append(avg_top5_2to1_score)
     features.append(avg_word1_word2_score)
     features += centroid_to_conn_scores
-    print(len(features))
+
     features = torch.tensor(features)
 
     return features
