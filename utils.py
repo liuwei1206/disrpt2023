@@ -232,10 +232,10 @@ def get_similarity_features(word_list1, word_list2, conn_reps, encoder, tokenize
     fenzi = torch.matmul(word_reps_1, word_reps_2.transpose(1, 0))
     fenmu = torch.norm(word_reps_1, p=2, dim=1).unsqueeze(1) * torch.norm(word_reps_2, p=2, dim=1)
     word1_word2_scores = 1 - fenzi / fenmu # [N1, N2]
-    avg_word1_word2_score = torch.mean(torch.max(word1_word2_scores).values)
+    avg_word1_word2_score = torch.mean(torch.max(word1_word2_scores, dim=-1)[0])
 
     # 1.4 conn similarity
-    centroid_to_conn_scores = 1 - F.cosine_similarity(centroid_rep, word_reps, dim=1) # [N1]
+    centroid_to_conn_scores = 1 - F.cosine_similarity(centroid_rep, conn_reps, dim=1) # [N1]
     centroid_to_conn_scores = centroid_to_conn_scores.detach().cpu()
 
     ## 2. merge features
