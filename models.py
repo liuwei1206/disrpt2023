@@ -27,6 +27,7 @@ class BaseRelClassifier(PreTrainedModel):
         self.dropout = nn.Dropout(args.dropout)
         self.num_labels = args.num_labels
         self.do_freeze = args.do_freeze
+        self.feature_size = args.feature_size
 
         if self.do_freeze:
             for name, param in self.encoder.named_parameters():
@@ -55,7 +56,7 @@ class BaseRelClassifier(PreTrainedModel):
                 token_type_ids=token_type_ids,
             )
         pooled_outputs = outputs.pooler_output
-        if features is not None:
+        if features is not None and self.feature_size > 0:
             pooled_outputs = torch.cat((pooled_outputs, features), dim=-1)
         pooled_outputs = self.dropout(pooled_outputs)
         logits = self.classifier(pooled_outputs) # [B, N, L] or [B, L]
