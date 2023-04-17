@@ -327,6 +327,7 @@ def main():
             model = BaseRelClassifier(config=config, args=args)
             dataset_name = "RelDataset"
     encoder = encoder.to(args.device)
+    encoder = fix_param(encoder)
     model = model.to(args.device)
     dataset_params = {
         "tokenizer": tokenizer,
