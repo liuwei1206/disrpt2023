@@ -16,7 +16,9 @@ from torch.utils.data.sampler import RandomSampler, Sampler, SequentialSampler
 from torch.utils.data.dataloader import DataLoader
 
 from transformers.optimization import AdamW, get_linear_schedule_with_warmup
-from transformers import RobertaConfig, RobertaTokenizer
+from transformers.models.roberta import RobertaConfig, RobertaTokenizer
+from transformers.models.bert import BertConfig, BertTokenizer
+from transformers.models.electra import ElectraConfig, ElectraTokenizer
 
 from utils import *
 from task_dataset import SegDataset
@@ -48,6 +50,7 @@ def get_argparse():
     parser.add_argument("--data_dir", default="data/dataset", type=str)
     parser.add_argument("--dataset", default="pdtb2", type=str, help="pdtb2, pdtb3")
     parser.add_argument("--output_dir", default="data/result", type=str)
+    parser.add_argument("--feature_size", default=0, type=int)
 
     # for training
     parser.add_argument("--model_type", default="base", type=str, help="roberta-bilstm-crf")
@@ -60,8 +63,8 @@ def get_argparse():
     parser.add_argument("--eval_batch_size", default=24, type=int)
     parser.add_argument("--max_seq_length", default=256, type=int)
     parser.add_argument("--num_train_epochs", default=10, type=int, help="training epoch")
-    parser.add_argument("--learning_rate", default=3e-3, type=float, help="learning rate")
-    parser.add_argument("--dropout", default=0.0, type=float)
+    parser.add_argument("--learning_rate", default=3e-5, type=float, help="learning rate")
+    parser.add_argument("--dropout", default=0.1, type=float)
     parser.add_argument("--max_grad_norm", default=2.0, type=float)
     parser.add_argument("--weight_decay", default=0.1, type=float)
     parser.add_argument("--warmup_ratio", default=0.06, type=float)
@@ -240,7 +243,49 @@ def main():
     logger.info("Training/evaluation parameters %s", args)
     set_seed(args.seed)
 
-    # 1.prepare data
+    # 1.prepare pretrained path
+    lang_type = args.dataset.split(".")[0]
+    args.lang_type = lang_type
+    if lang_type.lower() == "deu":
+        encoder_type = "roberta"
+        pretrained_path = "xlm-roberta-large"
+    elif lang_type.lower() == "eng":
+        encoder_type = "electra"
+        pretrained_path = "google/electra-large-discriminator"
+    elif lang_type.lower() == "eus":
+        encoder_type = "bert"
+        pretrained_path = "ixa-ehu/berteus-base-cased"
+    elif lang_type.lower() == "fas":
+        encoder_type = "bert"
+        pretrained_path = "HooshvareLab/bert-fa-base-uncased"
+    elif lang_type.lower() == "fra":
+        encoder_type = "roberta"
+        pretrained_path = "xlm-roberta-large"
+    elif lang_type.lower() == "ita":
+        encoder_type = "bert"
+        pretrained_path = "dbmdz/bert-base-italian-cased"
+    elif lang_type.lower() == "nld":
+        encoder_type = "roberta"
+        pretrained_path = "pdelobelle/robbert-v2-dutch-base"
+    elif lang_type.lower() == "por":
+        encoder_type = "bert"
+        pretrained_path = "neuralmind/bert-base-portuguese-cased"
+    elif lang_type.lower() == "rus":
+        encoder_type = "bert"
+        pretrained_path = "DeepPavlov/rubert-base-cased"
+    elif lang_type.lower() == "spa":
+        encoder_type = "bert"
+        pretrained_path = "dccuchile/bert-base-spanish-wwm-cased"
+    elif lang_type.lower() == "tur":
+        encoder_type = "bert"
+        pretrained_path = "dbmdz/bert-base-turkish-cased"
+    elif lang_type.lower() == "zho":
+        encoder_type = "bert"
+        pretrained_path = "bert-base-chinese"
+    args.encoder_type = encoder_type
+    args.pretrained_path = pretrained_path
+
+    # 2.prepare data
     data_dir = os.path.join(args.data_dir, args.dataset)
     args.data_dir = data_dir
     train_data_file = os.path.join(data_dir, "{}_train.json".format(args.dataset))
@@ -258,16 +303,28 @@ def main():
     # 2.define models
     if args.model_type.lower() == "base":
         if args.encoder_type.lower() == "roberta":
-            config = RobertaConfig.from_pretrained("roberta-base")
-            tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
-            model = BaseSegClassifier(config=config, args=args)
-            dataset_name = "SegDataset"
+            config = RobertaConfig.from_pretrained(pretrained_path)
+            tokenizer = RobertaTokenizer.from_pretrained(pretrained_path)
+        elif args.encoder_type.lower() == "bert":
+            config = BertConfig.from_pretrained(pretrained_path)
+            tokenizer = BertTokenizer.from_pretrained(pretrained_path)
+        elif args.encoder_type.lower() == "electra":
+            config = ElectraConfig.from_pretrained(pretrained_path)
+            tokenizer = ElectraTokenizer.from_pretrained(pretrained_path)
+        model = BaseSegClassifier(config=config, args=args)
+        dataset_name = "SegDataset"
     elif args.model_type.lower() == "bilstm+crf":
         if args.encoder_type.lower() == "roberta":
-            config = RobertaConfig.from_pretrained("roberta-base")
-            tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
-            model = BiLSTMCRF(config=config, args=args)
-            dataset_name = "SegDataset"
+            config = RobertaConfig.from_pretrained(pretrained_path)
+            tokenizer = RobertaTokenizer.from_pretrained(pretrained_path)
+        elif args.encoder_type.lower() == "bert":
+            config = BertConfig.from_pretrained(pretrained_path)
+            tokenizer = BertTokenizer.from_pretrained(pretrained_path)
+        elif args.encoder_type.lower() == "electra":
+            config = ElectraConfig.from_pretrained(pretrained_path)
+            tokenizer = ElectraTokenizer.from_pretrained(pretrained_path)
+        model = BiLSTMCRF(config=config, args=args)
+        dataset_name = "SegDataset"
     model = model.to(args.device)
     args.tokenizer = tokenizer
     dataset_params = {
