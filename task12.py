@@ -79,7 +79,9 @@ def set_seed(seed):
 
 def get_dataloader(dataset, args, mode="train"):
     print("  {} dataset length: ".format(mode), len(dataset))
-    if mode.lower() == "train1":
+    if mode.lower() == "train":
+        # here, if you want to use random sampler, then we cannot map the result one-by-one in the evaluate step
+        # but, since it's training stage, I think it's ok, you can input the training file again under the test stage.
         sampler = RandomSampler(dataset)
         batch_size = args.train_batch_size
     else:
@@ -120,7 +122,7 @@ def get_optimizer(model, args, num_training_steps):
 def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_dataloader=None):
     # 1.prepare
     t_total = int(len(train_dataloader) * args.num_train_epochs)
-    print_step = int(len(train_dataloader) // 4)
+    print_step = int(len(train_dataloader) // 4) + 1
     num_train_epochs = args.num_train_epochs
     optimizer, scheduler = get_optimizer(model, args, t_total)
     logger.info(" ***** Running training *****")
@@ -220,10 +222,10 @@ def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=F
         gold_file = args.dev_data_file.replace(".json", ".tok")
     elif desc == "test":
         gold_file = args.test_data_file.replace(".json", ".tok")
-    # print(all_pred_ids)
+    print(all_pred_ids)
     pred_file = seg_preds_to_file(all_input_ids, all_pred_ids, all_attention_mask, args.tokenizer, args.label_list, gold_file)
     score_dict = get_scores(gold_file, pred_file)
- 
+
     return score_dict
 
 def main():

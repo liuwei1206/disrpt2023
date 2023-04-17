@@ -8,7 +8,8 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 from torch.nn import CrossEntropyLoss
-from TorchCRF import CRF
+# I modified the name of the pakege from TorchCRF to torchcrf, since my computer has only this version of crf...
+from torchcrf import CRF
 
 from transformers import PreTrainedModel
 from transformers.models.roberta import RobertaModel
@@ -58,6 +59,7 @@ class BaseRelClassifier(PreTrainedModel):
         pooled_outputs = outputs.pooler_output
         if features is not None and self.feature_size > 0:
             pooled_outputs = torch.cat((pooled_outputs, features), dim=-1)
+
         pooled_outputs = self.dropout(pooled_outputs)
         logits = self.classifier(pooled_outputs) # [B, N, L] or [B, L]
         preds = torch.argmax(logits, dim=-1)
