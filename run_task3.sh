@@ -8,7 +8,7 @@ python3 task3.py --do_train \
                  --max_seq_length=384 \
                  --train_batch_size=16 \
                  --eval_batch_size=32 \
-                 --learning_rate=1e-4 \
+                 --learning_rate=3e-5 \
                  --dropout=0.1 \
                  --num_train_epochs=10 \
 

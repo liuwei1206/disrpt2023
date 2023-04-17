@@ -168,7 +168,7 @@ def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_da
 
         # 3. evaluate and save
         model.eval()
-        if train_dataloader is not None:
+        if False and train_dataloader is not None:
             score_dict = evaluate(model, args, train_dataloader, tokenizer, epoch, desc="train")
             print("\nTrain: Epoch=%d, F1=%.4f\n"%(epoch, score_dict["f_score"]))
         if dev_dataloader is not None:

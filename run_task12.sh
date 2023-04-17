@@ -3,13 +3,13 @@
 # zho.dep.scidtb, zho.pdtb.cdtb, zho.rst.gcdt, zho.rst.sctb
 # <<"COMMENT"
 python3 task12.py --do_train \
-                 --dataset="eng.test" \
-                 --max_seq_length=256 \
-                 --train_batch_size=16 \
-                 --eval_batch_size=16 \
-                 --learning_rate=3e-5 \
-                 --dropout=0.1 \
-                 --num_train_epochs=10 \
+                  --dataset="eng.rst.gum" \
+                  --max_seq_length=256 \
+                  --train_batch_size=16 \
+                  --eval_batch_size=32 \
+                  --learning_rate=3e-5 \
+                  --dropout=0.1 \
+                  --num_train_epochs=10 \
 
 # COMMENT
 # eng.pdtb.pdtb
