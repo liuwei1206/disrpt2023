@@ -246,12 +246,13 @@ def main():
     # 1.prepare pretrained path
     lang_type = args.dataset.split(".")[0]
     args.lang_type = lang_type
+    print(lang_type)
     if lang_type.lower() == "deu":
         encoder_type = "roberta"
         pretrained_path = "xlm-roberta-large"
     elif lang_type.lower() == "eng":
-        encoder_type = "electra"
-        pretrained_path = "google/electra-large-discriminator"
+        encoder_type = "bert" # "electra"
+        pretrained_path = "bert-base-cased" # "google/electra-large-discriminator"
     elif lang_type.lower() == "eus":
         encoder_type = "bert"
         pretrained_path = "ixa-ehu/berteus-base-cased"
