@@ -19,6 +19,7 @@ from transformers.optimization import AdamW, get_linear_schedule_with_warmup
 from transformers.models.roberta import RobertaConfig, RobertaTokenizer
 from transformers.models.bert import BertConfig, BertTokenizer
 from transformers.models.electra import ElectraConfig, ElectraTokenizer
+from transformers.models.xlm_roberta import XLMRobertaConfig, XLMRobertaTokenizer
 
 from utils import *
 from task_dataset import SegDataset
@@ -248,7 +249,7 @@ def main():
     args.lang_type = lang_type
     print(lang_type)
     if lang_type.lower() == "deu":
-        encoder_type = "roberta"
+        encoder_type = "xlm-roberta"
         pretrained_path = "xlm-roberta-large"
     elif lang_type.lower() == "eng":
         encoder_type = "bert" # "electra"
@@ -260,7 +261,7 @@ def main():
         encoder_type = "bert"
         pretrained_path = "HooshvareLab/bert-fa-base-uncased"
     elif lang_type.lower() == "fra":
-        encoder_type = "roberta"
+        encoder_type = "xlm-roberta"
         pretrained_path = "xlm-roberta-large"
     elif lang_type.lower() == "ita":
         encoder_type = "bert"
@@ -312,6 +313,9 @@ def main():
         elif args.encoder_type.lower() == "electra":
             config = ElectraConfig.from_pretrained(pretrained_path)
             tokenizer = ElectraTokenizer.from_pretrained(pretrained_path)
+        elif args.encoder_type.lower() == "xlm-roberta":
+            config = XLMRobertaConfig.from_pretrained(pretrained_path)
+            tokenizer = XLMRobertaTokenizer.from_pretrained(pretrained_path)
         model = BaseSegClassifier(config=config, args=args)
         dataset_name = "SegDataset"
     elif args.model_type.lower() == "bilstm+crf":
@@ -324,6 +328,9 @@ def main():
         elif args.encoder_type.lower() == "electra":
             config = ElectraConfig.from_pretrained(pretrained_path)
             tokenizer = ElectraTokenizer.from_pretrained(pretrained_path)
+        elif args.encoder_type.lower() == "xlm-roberta":
+            config = XLMRobertaConfig.from_pretrained(pretrained_path)
+            tokenizer = XLMRobertaTokenizer.from_pretrained(pretrained_path)
         model = BiLSTMCRF(config=config, args=args)
         dataset_name = "SegDataset"
     model = model.to(args.device)

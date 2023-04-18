@@ -16,6 +16,7 @@ from transformers import PreTrainedModel
 from transformers.models.roberta import RobertaModel
 from transformers.models.bert import BertModel
 from transformers.models.electra import ElectraModel
+from transformers.models.xlm_roberta import XLMRobertaModel
 
 class BaseRelClassifier(PreTrainedModel):
     def __init__(self, config, args):
@@ -85,6 +86,8 @@ class BaseSegClassifier(PreTrainedModel):
             self.encoder = BertModel.from_pretrained(args.pretrained_path, config=config)
         elif self.encoder_type == "electra":
             self.encoder = ElectraModel.from_pretrained(args.pretrained_path, config=config)
+        elif self.encoder_type == "xlm-roberta":
+            self.encoder = XLMRobertaModel.from_pretrained(args.pretrained_path, config=config)
         self.classifier = nn.Linear(config.hidden_size+args.feature_size, args.num_labels)
         self.dropout = nn.Dropout(args.dropout)
         self.num_labels = args.num_labels
