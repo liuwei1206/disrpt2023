@@ -6,6 +6,7 @@ import json
 import numpy as np
 import torch
 import torch.nn.functional as F
+from torch.autograd import grad
 from torch import nn
 from torch.nn import CrossEntropyLoss
 # I modified the name of the pakege from TorchCRF to torchcrf, since my computer has only this version of crf...
@@ -35,13 +36,104 @@ class BaseRelClassifier(PreTrainedModel):
         self.dropout = nn.Dropout(args.dropout)
         self.num_labels = args.num_labels
         self.do_freeze = args.do_freeze
+        self.do_adv = args.do_adv
         self.feature_size = args.feature_size
 
         if self.do_freeze:
             for name, param in self.encoder.named_parameters():
                 param.requires_grad = False
 
+    def pretrained_forward(
+        self,
+        input_ids,
+        attention_mask=None,
+        token_type_ids=None,
+    ):
+        embedding_output = self.encoder.embeddings(
+            input_ids=input_ids,
+            token_type_ids=token_type_ids,
+        )
+        input_shape = input_ids.size()
+        extended_attention_mask = self.get_extended_attention_mask(attention_mask, input_shape, input_ids.device)
+        encoder_outputs = self.encoder.encoder(
+            embedding_output,
+            attention_mask=extended_attention_mask,
+        )
+        sequence_output = encoder_outputs[0]
+        pooled_output = self.encoder.pooler(sequence_output)
+
+        return pooled_output, embedding_output
+
+    def adv_attack(self, embedding_output, loss, epsilon=1):
+        """
+        We choose the direction that makes the loss decreases fastest.
+
+        epsilon = 1 or 5
+
+        refer to: https://github.com/akkarimi/BERT-For-ABSA/blob/master/src/bat_asc.py
+        """
+        loss_grad = grad(loss, embedding_output, retain_graph=True)[0]
+        loss_grad_norm = torch.sqrt(torch.sum(loss_grad**2, (1,2)))
+        perturbed_embedding_output = embedding_output + epsilon * (loss_grad / (loss_grad_norm.reshape(-1, 1, 1)))
+        return perturbed_embedding_output
+
+    def adversarial_forward(self, embedding_output, perturbed_embedding_output, attention_mask, labels):
+        reserve_cls_mask = torch.zeros_like(embedding_output).to(embedding_output.device)
+        reserve_cls_mask[:, 0, :] = 1
+        perturbed_embedding_output = torch.where(reserve_cls_mask.byte(), embedding_output, perturbed_embedding_output)
+
+        input_shape = perturbed_embedding_output.size()[:2]
+        extended_attention_mask = self.get_extended_attention_mask(attention_mask, input_shape, perturbed_embedding_output.device)
+        encoder_outputs = self.encoder.encoder(
+            perturbed_embedding_output,
+            attention_mask=extended_attention_mask,
+        )
+        sequence_output = encoder_outputs[0]
+        pooled_output = self.encoder.pooler(sequence_output)
+        pooled_output = self.dropout(pooled_output)
+        logits = self.classifier(pooled_output)
+        loss_fct = CrossEntropyLoss(ignore_index=-100)
+        adv_loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+
+        return adv_loss
+
+
     def forward(
+        self,
+        input_ids,
+        attention_mask=None,
+        token_type_ids=None,
+        features=None,
+        labels=None,
+        flag="Train"
+    ):
+        pooled_output, embedding_output = self.pretrained_forward(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+        )
+        pooled_output = self.dropout(pooled_output)
+        logits = self.classifier(pooled_output)
+        preds = torch.argmax(logits, dim=-1)
+        outputs = (preds,)
+
+        if flag.lower() == "train":
+            loss_fct = CrossEntropyLoss(ignore_index=-100)
+            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+            if self.do_adv:
+                perturbed_embedding_output = self.adv_attack(embedding_output, loss)
+                adv_loss = self.adversarial_forward(
+                    embedding_output,
+                    perturbed_embedding_output,
+                    attention_mask,
+                    labels
+                )
+                loss = loss + adv_loss
+            outputs = (loss,) + outputs
+
+        return outputs
+
+    def forward_old(
         self,
         input_ids,
         attention_mask=None,
@@ -78,6 +170,7 @@ class BaseRelClassifier(PreTrainedModel):
             outputs = (loss,) + outputs
 
         return outputs
+
 
 class BaseSegClassifier(PreTrainedModel):
     def __init__(self, config, args):

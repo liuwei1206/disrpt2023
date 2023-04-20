@@ -59,6 +59,7 @@ def get_argparse():
     parser.add_argument("--do_dev", default=False, action="store_true")
     parser.add_argument("--do_test", default=False, action="store_true")
     parser.add_argument("--do_freeze", default=False, action="store_true")
+    parser.add_argument("--do_adv", default=False, action="store_true")
     parser.add_argument("--train_batch_size", default=16, type=int)
     parser.add_argument("--eval_batch_size", default=8, type=int)
     parser.add_argument("--max_seq_length", default=128, type=int)
