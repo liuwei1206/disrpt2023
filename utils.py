@@ -4,6 +4,7 @@ from collections import defaultdict
 
 import torch
 import torch.nn.functional as F
+import numpy as np
 
 def token_labels_from_file(file_name):
     labels = set()
@@ -110,6 +111,71 @@ def seg_preds_to_file(all_pred_ids, all_label_ids, all_attention_mask, tokenizer
                 f.write(line)
 
     return pred_file
+
+def seg_preds_to_file_new(all_input_ids, all_label_ids, all_attention_mask, all_tok_idxs, tokenizer, label_id_dict, gold_tok_file):
+    """
+    new version of writing a result tok file
+    convert prediction ids to labels, and save the results into a file with the same format as gold_file
+    Args:
+        all_input_ids: predicted tokens' id list 
+        all_label_ids: predicted labels' id list 
+        all_attention_mask: attention mask of the pre-trained LM
+        label_id_dict: the dictionary map the labels' id to the original string label
+        gold_file: the original .tok file
+    """
+    all_doc_data = []
+    new_doc_data = []
+    with open(gold_tok_file, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+        tmp_doc_id = None
+        tmp_doc = []
+        for line in lines:
+            all_doc_data.append(line)
+    og_tokens = []
+    pred_labels = []
+
+    for i in range(len(all_attention_mask)):
+        tmp_idx = [idx for idx in all_tok_idxs[i] if idx > 0]
+        point_loc = np.argwhere(all_input_ids[i] == 102)
+        if len(point_loc):
+            tmp_idx.append(point_loc[0][0])
+        og_toks_ids = all_input_ids[i][tmp_idx]
+        tmp_toks = tokenizer.convert_ids_to_tokens(og_toks_ids)
+
+        for j in range(len(tmp_toks)):
+            if tmp_toks[j] == "[SEP]":
+                og_tokens.append(".")
+                pred_labels.append("_")
+            else:
+                og_tokens.append(tmp_toks[j])
+                pred_labels.append(label_id_dict[int(all_label_ids[i][j])])
+
+    pointer = 0
+    for line in all_doc_data:
+        if line != '\n':
+            if "newdoc_id" in line.lower():
+                new_doc_data.append(line)
+            else:
+                items = line.split("\t")
+                if "-" in items[0]:  # ignore such as 16-17
+                    continue
+                items[-1] = pred_labels[pointer]
+                items[-2] = og_tokens[pointer]
+                print(items)
+                new_doc_data.append("\t".join(items))
+                pointer += 1
+        else:
+            new_doc_data.append('\n')
+
+    pred_file = gold_tok_file.replace(".tok", "_pred.tok")
+    with open(pred_file,"w") as f:
+        for line in new_doc_data:
+            if line[-1:] != "\n":
+                f.write(line + "\n")
+            else:
+                f.write(line)
+
+
 
 def rel_preds_to_file(pred_ids, label_list, gold_file):
     pred_labels = [label_list[id] for id in pred_ids]

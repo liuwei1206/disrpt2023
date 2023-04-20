@@ -208,7 +208,6 @@ def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=F
         attention_mask = batch[1].detach().cpu().numpy()
         label_ids = batch[2].detach().cpu().numpy()
         pred_ids = preds.detach().cpu().numpy()
-
         if all_input_ids is None:
             all_input_ids = input_ids
             all_attention_mask = attention_mask
@@ -229,6 +228,54 @@ def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=F
         gold_file = args.test_data_file.replace(".json", ".tok")
     print(all_pred_ids)
     pred_file = seg_preds_to_file(all_input_ids, all_pred_ids, all_attention_mask, args.tokenizer, args.label_list, gold_file)
+    score_dict = get_scores(gold_file, pred_file)
+
+    return score_dict
+
+
+def evaluate_new(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=False):
+    all_input_ids = None
+    all_attention_mask = None
+    all_label_ids = None
+    all_pred_ids = None
+    for batch in tqdm(dataloader, desc=desc):
+        batch = tuple(t.to(args.device) for t in batch)
+        inputs = {
+            "input_ids": batch[0],
+            "attention_mask": batch[1],
+            "labels": batch[2],
+            "flag": "Eval"
+        }
+        with torch.no_grad():
+            outputs = model(**inputs)
+            preds = outputs[0]
+
+        input_ids = batch[0].detach().cpu().numpy()
+        attention_mask = batch[1].detach().cpu().numpy()
+        label_ids = batch[2].detach().cpu().numpy()
+        pred_ids = preds.detach().cpu().numpy()
+        og_tok_idxs = batch[3].detach().cpu().numpy()
+        if all_input_ids is None:
+            all_input_ids = input_ids
+            all_attention_mask = attention_mask
+            all_label_ids = label_ids
+            all_pred_ids = pred_ids
+            all_tok_idxs = og_tok_idxs
+        else:
+            all_input_ids = np.append(all_input_ids, input_ids, axis=0)
+            all_attention_mask = np.append(all_attention_mask, attention_mask, axis=0)
+            all_label_ids = np.append(all_label_ids, label_ids, axis=0)
+            all_pred_ids = np.append(all_pred_ids, pred_ids, axis=0)
+            all_tok_idxs = np.append(all_tok_idxs, og_tok_idxs, axis=0)
+    ## evaluation
+    if desc == "train":
+        gold_file = args.train_data_file.replace(".json", ".tok")
+    elif desc == "dev":
+        gold_file = args.dev_data_file.replace(".json", ".tok")
+    elif desc == "test":
+        gold_file = args.test_data_file.replace(".json", ".tok")
+    print(all_pred_ids)
+    pred_file = seg_preds_to_file_new(all_input_ids, all_label_ids, all_attention_mask, all_tok_idxs, args.tokenizer, args.label_list, gold_file)
     score_dict = get_scores(gold_file, pred_file)
 
     return score_dict
@@ -334,6 +381,8 @@ def main():
             tokenizer = XLMRobertaTokenizer.from_pretrained(pretrained_path)
         model = BiLSTMCRF(config=config, args=args)
         dataset_name = "SegDataset"
+        # you can test my new dataset by using folowing code
+        # dataset_name = "SegDataset2"
     model = model.to(args.device)
     args.tokenizer = tokenizer
     dataset_params = {
