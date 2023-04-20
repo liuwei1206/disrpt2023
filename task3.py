@@ -18,6 +18,8 @@ from torch.utils.data.dataloader import DataLoader
 from transformers.optimization import AdamW, get_linear_schedule_with_warmup
 from transformers.models.roberta import RobertaConfig, RobertaTokenizer
 from transformers.models.bert import BertConfig, BertTokenizer
+from transformers.models.electra import ElectraConfig, ElectraTokenizer
+from transformers import XLMRobertaConfig, XLMRobertaTokenizer
 
 from utils import *
 from task_dataset import SegDataset
@@ -318,14 +320,20 @@ def main():
             config = RobertaConfig.from_pretrained(args.pretrained_path)
             tokenizer = RobertaTokenizer.from_pretrained(args.pretrained_path)
             encoder = RobertaModel.from_pretrained(args.pretrained_path)
-            model = BaseRelClassifier(config=config, args=args)
-            dataset_name = "RelDataset"
         elif args.encoder_type.lower() == "bert":
             config = BertConfig.from_pretrained(args.pretrained_path)
             tokenizer = BertTokenizer.from_pretrained(args.pretrained_path)
             encoder = BertModel.from_pretrained(args.pretrained_path)
-            model = BaseRelClassifier(config=config, args=args)
-            dataset_name = "RelDataset"
+        elif args.encoder_type.lower() == "electra":
+            config = ElectraConfig.from_pretrained(pretrained_path)
+            tokenizer = ElectraTokenizer.from_pretrained(pretrained_path)
+            encoder = ElectraModel.from_pretrained(args.pretrained_path)
+        elif args.encoder_type.lower() == "xlm-roberta":
+            config = XLMRobertaConfig.from_pretrained(pretrained_path)
+            tokenizer = XLMRobertaTokenizer.from_pretrained(pretrained_path)
+            encoder = XLMRobertaModel.from_pretrained(pretrained_path)
+        model = BaseRelClassifier(config=config, args=args)
+        dataset_name = "RelDataset"
     encoder = encoder.to(args.device)
     encoder = fix_param(encoder)
     model = model.to(args.device)

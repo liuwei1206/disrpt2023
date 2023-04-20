@@ -27,6 +27,10 @@ class BaseRelClassifier(PreTrainedModel):
             self.encoder = RobertaModel.from_pretrained(args.pretrained_path, config=config)
         elif self.encoder_type == "bert":
             self.encoder = BertModel.from_pretrained(args.pretrained_path, config=config)
+        elif self.encoder_type == "electra":
+            self.encoder = ElectraModel.from_pretrained(args.pretrained_path, config=config)
+        elif self.encoder_type == "xlm-roberta":
+            self.encoder = XLMRobertaModel.from_pretrained(args.pretrained_path, config=config)
         self.classifier = nn.Linear(config.hidden_size+args.feature_size, args.num_labels)
         self.dropout = nn.Dropout(args.dropout)
         self.num_labels = args.num_labels
