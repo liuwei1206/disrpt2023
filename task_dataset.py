@@ -25,7 +25,7 @@ class SegDataset(Dataset):
             file_name: data path
         """
         default_label = "_"
-
+        print(data_path)
         token_list = []
         label_list = []
         all_texts = []
@@ -33,6 +33,7 @@ class SegDataset(Dataset):
             for line in f.readlines():
                 line_content = json.loads(line)
                 all_texts.append(line_content)
+
         for doc in all_texts:
             doc_token_list = doc["doc_sents"]
             doc_label_list = doc["doc_sent_token_labels"]
@@ -48,6 +49,7 @@ class SegDataset(Dataset):
             if token != '.':
                 tmp_words.append(token)
                 tmp_labels.append(tag)
+                # print("in-")
             else:
                 if len(tmp_words) > self.max_seq_length - 2:
                     print(tmp_words)
@@ -82,7 +84,7 @@ class SegDataset(Dataset):
                 tmp_masks.append(attention_mask)
 
                 tmp_words, tmp_labels = [], []
-
+        print("sample size: ", len(tmp_sent_token_ids))
         self.input_ids = np.array(tmp_sent_token_ids)
         self.attention_mask = np.array(tmp_masks)
         self.label_ids = np.array(tmp_label_ids_list)

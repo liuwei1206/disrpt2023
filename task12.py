@@ -140,6 +140,7 @@ def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_da
     global_step = 0
     tr_loss = 0.0
     logging_loss = 0.0
+    best_dev = 0.0
     train_iterator = trange(1, int(num_train_epochs) + 1, desc="Epoch")
     for epoch in train_iterator:
         epoch_iterator = tqdm(train_dataloader, desc="Iteration")
@@ -178,6 +179,8 @@ def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_da
             print("\nTrain: Epoch=%d, F1=%.4f\n"%(epoch, score_dict["f_score"]))
         if dev_dataloader is not None:
             score_dict = evaluate(model, args, dev_dataloader, tokenizer, epoch, desc="dev")
+            if score_dict["f_score"] > best_dev:
+                best_dev = score_dict["f_score"]
             print("\nDev: Epoch=%d, F1=%.4f\n"%(epoch, score_dict["f_score"]))
         if test_dataloader is not None:
             score_dict = evaluate(model, args, test_dataloader, tokenizer, epoch, desc="test")
@@ -186,6 +189,7 @@ def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_da
         output_dir = os.path.join(output_dir, f"{PREFIX_CHECKPOINT_DIR}_{epoch}")
         # os.makedirs(output_dir, exist_ok=True)
         # torch.save(model.state_dict(), os.path.join(output_dir, "pytorch_model.bin"))
+    print("\nBest F1 on dev: %.4f"%(best_dev))
 
 def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=False):
     all_input_ids = None
@@ -297,8 +301,10 @@ def main():
     args.lang_type = lang_type
     print(lang_type)
     if lang_type.lower() == "deu":
-        encoder_type = "xlm-roberta"
-        pretrained_path = "xlm-roberta-large"
+        # encoder_type = "xlm-roberta"
+        # pretrained_path = "xlm-roberta-large"
+        encoder_type = "bert"
+        pretrained_path = "bert-base-german-cased"
     elif lang_type.lower() == "eng":
         encoder_type = "bert" # "electra"
         pretrained_path = "bert-base-cased" # "google/electra-large-discriminator"
@@ -398,6 +404,7 @@ def main():
         dev_dataset = MyDataset(dev_data_file, params=dataset_params)
         print(test_data_file)
         if os.path.exists(test_data_file):
+            print("++in++")
             test_dataset = MyDataset(test_data_file, params=dataset_params)
         else:
             test_dataset = None
