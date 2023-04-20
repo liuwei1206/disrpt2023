@@ -50,6 +50,7 @@ class SegDataset(Dataset):
                 tmp_labels.append(tag)
             else:
                 if len(tmp_words) > self.max_seq_length - 2:
+                    print(tmp_words)
                     temp_sent = [self.tokenizer.cls_token] + tmp_words[:self.max_seq_length-2] + [
                         self.tokenizer.sep_token]
                     temp_label = [default_label] + tmp_labels[:self.max_seq_length-2] + [default_label]

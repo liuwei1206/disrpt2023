@@ -3,8 +3,8 @@
 # zho.dep.scidtb, zho.pdtb.cdtb, zho.rst.gcdt, zho.rst.sctb
 # <<"COMMENT"
 python3 task12.py --do_train \
-                  --dataset="deu.rst.pcc" \
-                  --max_seq_length=256 \
+                  --dataset="spa.rst.sctb" \
+                  --max_seq_length=512 \
                   --train_batch_size=16 \
                   --eval_batch_size=32 \
                   --learning_rate=3e-5 \

@@ -19,7 +19,8 @@ from transformers.optimization import AdamW, get_linear_schedule_with_warmup
 from transformers.models.roberta import RobertaConfig, RobertaTokenizer
 from transformers.models.bert import BertConfig, BertTokenizer
 from transformers.models.electra import ElectraConfig, ElectraTokenizer
-from transformers.models.xlm_roberta import XLMRobertaConfig, XLMRobertaTokenizer
+# from transformers.models.xlm_roberta import XLMRobertaConfig, XLMRobertaTokenizer
+from transformers import XLMRobertaConfig, XLMRobertaTokenizer
 
 from utils import *
 from task_dataset import SegDataset
