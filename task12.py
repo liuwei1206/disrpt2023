@@ -191,6 +191,75 @@ def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_da
         # torch.save(model.state_dict(), os.path.join(output_dir, "pytorch_model.bin"))
     print("\nBest F1 on dev: %.4f"%(best_dev))
 
+def train_plus(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_dataloader=None, extra_feat_len=None):
+    # 1.prepare
+    t_total = int(len(train_dataloader) * args.num_train_epochs)
+    print_step = int(len(train_dataloader) // 4) + 1
+    num_train_epochs = args.num_train_epochs
+    optimizer, scheduler = get_optimizer(model, args, t_total)
+
+    logger.info(" ***** Running training *****")
+    logger.info("  Num examples = %d", len(train_dataloader.dataset))
+    logger.info("  Num Epochs = %d", num_train_epochs)
+    logger.info("  Batch size per device = %d", args.train_batch_size)
+    logger.info("  Total optimization steps = %d", t_total)
+
+    # 2.train
+    global_step = 0
+    tr_loss = 0.0
+    logging_loss = 0.0
+    best_dev = 0.0
+    train_iterator = trange(1, int(num_train_epochs) + 1, desc="Epoch")
+    for epoch in train_iterator:
+        epoch_iterator = tqdm(train_dataloader, desc="Iteration")
+        model.train()
+        model.zero_grad()
+        for step, batch in enumerate(epoch_iterator):
+            batch = tuple(t.to(args.device) for t in batch)
+            inputs = {
+                "input_ids": batch[0],
+                "attention_mask": batch[1],
+                "labels": batch[2],
+                "flag": "Train",
+                "extra_feat": batch[4]
+            }
+
+            outputs = model(**inputs)
+            loss = outputs[0]
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
+            optimizer.step()
+            scheduler.step()
+            optimizer.zero_grad()
+
+            global_step += 1
+            logging_loss = loss.item() * args.train_batch_size
+            tr_loss += logging_loss
+
+            if global_step % print_step == 0:
+                print(" global_step=%d, cur loss=%.4f, global avg loss=%.4f" % (
+                        global_step, logging_loss, tr_loss / global_step)
+                )
+
+        # 3. evaluate and save
+        model.eval()
+        if False and train_dataloader is not None:
+            score_dict = evaluate(model, args, train_dataloader, tokenizer, epoch, desc="train")
+            print("\nTrain: Epoch=%d, F1=%.4f\n"%(epoch, score_dict["f_score"]))
+        if dev_dataloader is not None:
+            score_dict = evaluate(model, args, dev_dataloader, tokenizer, epoch, desc="dev")
+            if score_dict["f_score"] > best_dev:
+                best_dev = score_dict["f_score"]
+            print("\nDev: Epoch=%d, F1=%.4f\n"%(epoch, score_dict["f_score"]))
+        if test_dataloader is not None:
+            score_dict = evaluate(model, args, test_dataloader, tokenizer, epoch, desc="test")
+            print("\nTest: Epoch=%d, F1=%.4f\n"%(epoch, score_dict["f_score"]))
+        output_dir = os.path.join(args.output_dir, TIME_CHECKPOINT_DIR)
+        output_dir = os.path.join(output_dir, f"{PREFIX_CHECKPOINT_DIR}_{epoch}")
+        # os.makedirs(output_dir, exist_ok=True)
+        # torch.save(model.state_dict(), os.path.join(output_dir, "pytorch_model.bin"))
+    print("\nBest F1 on dev: %.4f"%(best_dev))
+
 def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=False):
     all_input_ids = None
     all_attention_mask = None
@@ -348,6 +417,7 @@ def main():
     dev_data_file = os.path.join(data_dir, "{}_dev.json".format(args.dataset))
     test_data_file = os.path.join(data_dir, "{}_test.json".format(args.dataset))
     label_dict, label_list = token_labels_from_file(train_data_file)
+    tok_pos_1, tok_pos_2, tok_pos_1_dict, tok_pos_2_dict = token_pos_from_file(train_data_file)
     args.train_data_file, args.dev_data_file, args.test_data_file = train_data_file, dev_data_file, test_data_file
     args.label_dict, args.label_list, args.num_labels = label_dict, label_list, len(label_list)
 
@@ -389,15 +459,34 @@ def main():
         dataset_name = "SegDataset"
         # you can test my new dataset by using folowing code
         # dataset_name = "SegDataset2"
+        # now you can aplly SegDatasetPlus
     model = model.to(args.device)
     args.tokenizer = tokenizer
-    dataset_params = {
-        "tokenizer": tokenizer,
-        "max_seq_length": args.max_seq_length,
-        "label_dict": label_dict,
-    }
-    dataset_module = __import__("task_dataset")
-    MyDataset = getattr(dataset_module, dataset_name)
+
+    if args.run_plus:
+        dataset_params = {
+            "tokenizer": tokenizer,
+            "max_seq_length": args.max_seq_length,
+            "label_dict": label_dict,
+            "pos1_dict": tok_pos_1_dict,
+            "pos1_list": tok_pos_1,
+            "pos1_convert": args.pos1_convert,
+            "pos2_dict": tok_pos_2_dict,
+            "pos2_list": tok_pos_2,
+            "pos2_convert": args.pos2_convert,
+        }
+        dataset_module = __import__("task_dataset")
+        MyDataset = getattr(dataset_module, dataset_name)
+        extra_feat_len = MyDataset.get_extra_feat_len()
+        args.extra_feat_dim = extra_feat_len
+    else:
+        dataset_params = {
+            "tokenizer": tokenizer,
+            "max_seq_length": args.max_seq_length,
+            "label_dict": label_dict,
+        }
+        dataset_module = __import__("task_dataset")
+        MyDataset = getattr(dataset_module, dataset_name)
 
     if args.do_train:
         train_dataset = MyDataset(train_data_file, params=dataset_params)
@@ -414,7 +503,11 @@ def main():
             test_dataloader = get_dataloader(test_dataset, args, mode="test")
         else:
             test_dataloader = None
-        train(model, args, tokenizer, train_dataloader, dev_dataloader, test_dataloader)
+        if args.run_plus:
+            train_plus(model, args, tokenizer, train_dataloader, dev_dataloader, test_dataloader, extra_feat_len)
+        else:
+            train(model, args, tokenizer, train_dataloader, dev_dataloader, test_dataloader)
+
 
     if args.do_dev or args.do_test:
         time_dir = "good"

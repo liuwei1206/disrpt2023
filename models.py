@@ -290,7 +290,73 @@ class BiLSTMCRF(PreTrainedModel):
 
         return outputs
 
+class BiLSTMCRFPlus(PreTrainedModel):
+    def __init__(self, config, args):
+        super().__init__(config=config)
 
+        self.encoder_type = args.encoder_type.lower()
+        self.num_labels = args.num_labels
+        self.extra_feat_dim = args.extra_feat_dim
+
+        if self.encoder_type == "roberta":
+            self.encoder = RobertaModel.from_pretrained(args.pretrained_model, config=config)
+        elif self.encoder_type == "bert":
+            self.encoder = BertModel.from_pretrained(args.pretrained_model, config=config)
+        self.lstm = nn.LSTM(
+            input_size=config.hidden_size, hidden_size=config.hidden_size,
+            num_layers=2, bidirectional=True, batch_first=True
+        )
+        
+        self.linear_mid = nn.Linear(config.hidden_size + self.extra_feat_dim, config.hidden_size)
+        
+        self.linear = nn.Linear(config.hidden_size*2, self.num_labels)
+        self.crf = CRF(self.num_labels)
+        self.dropout = nn.Dropout(args.dropout)
+        self.do_freeze = args.do_freeze
+
+        if self.do_freeze:
+            for name, param in self.encoder.named_parameters():
+                param.requires_grad = False
+
+    def forward(
+        self,
+        input_ids,
+        attention_mask=None,
+        token_type_ids=None,
+        labels=None,
+        flag="Train",
+        extra_feats=None,
+    ):
+        if self.do_freeze:
+            with torch.no_grad():
+                outputs = self.encoder(
+                    input_ids=input_ids,
+                    attention_mask=attention_mask,
+                    token_type_ids=token_type_ids,
+                )
+        else:
+            outputs = self.encoder(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                token_type_ids=token_type_ids,
+            )
+        sequence_outputs = outputs[0]
+        extra_feats = extra_feats.unsqueeze(1)
+        extra_feats = extra_feats.repeat(1, sequence_outputs.shape[1], 1)
+        sequence_outputs = torch.cat([sequence_outputs, extra_feats], dim=-1)
+        sequence_outputs = self.linear_mid(sequence_outputs)
+        sequence_outputs, _ = self.lstm(sequence_outputs)
+        feats = self.linear(sequence_outputs)
+
+        if flag.lower() == "trian":
+            loss = self.crf.forward(feats, labels, attention_mask).mean()
+            loss = -loss
+            outputs = (loss, )
+        else:
+            preds = self.crf.viterbi_decode(feats, attention_mask)
+            outputs = (preds, )
+
+        return outputs
 
 
 

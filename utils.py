@@ -26,6 +26,29 @@ def token_labels_from_file(file_name):
     # label_id_dict = {idx: l for idx, l in enumerate(labels)}
     return label_dict, labels
 
+def token_pos_from_file(file_name):
+    tok_pos_1 = set()
+    tok_pos_2 = set()
+    with open(file_name, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+        for line in lines:
+            line = line.strip()
+            if line:
+                sample = json.loads(line)
+                doc_sent_token_labels = sample["doc_sent_token_features"]
+                for sent_token_labels in doc_sent_token_labels:
+                    for feat in sent_token_labels:
+                        tok_pos_1.add(feat[1])
+                        tok_pos_2.add(feat[2])
+    tok_pos_1 = list(tok_pos_1)
+    tok_pos_2 = list(tok_pos_2)
+    tok_pos_1 = sorted(tok_pos_1)
+    tok_pos_2 = sorted(tok_pos_2)
+    tok_pos_1_dict = {t: idx + 1 for idx, t in enumerate(tok_pos_1)}
+    tok_pos_2_dict = {t: idx + 1 for idx, t in enumerate(tok_pos_2)}
+
+    return tok_pos_1, tok_pos_2, tok_pos_1_dict, tok_pos_2_dict
+
 def rel_labels_from_file(file_name):
     label_frequency = defaultdict(int)
     with open(file_name, "r", encoding="utf-8") as f:
