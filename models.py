@@ -121,6 +121,7 @@ class BaseRelClassifier(PreTrainedModel):
             loss_fct = CrossEntropyLoss(ignore_index=-100)
             loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
             if self.do_adv:
+                # print("in++++")
                 perturbed_embedding_output = self.adv_attack(embedding_output, loss)
                 adv_loss = self.adversarial_forward(
                     embedding_output,

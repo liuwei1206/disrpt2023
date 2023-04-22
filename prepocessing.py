@@ -138,7 +138,8 @@ def rel_reader(file_name):
                 doc_id = items[0]
                 unit1_toks = items[1]
                 unit2_toks = items[2]
-                label = items[11]
+                # label = items[11]
+                label = items[-1]
                 if doc_id in all_relation_data:
                     all_relation_data[doc_id].append((unit1_toks, unit2_toks, label))
                 else:
@@ -579,22 +580,32 @@ def convert_tur(conllu_file, rel_file, output_file):
 def convert_all(data_folder_path):
     folder_names = os.listdir(data_folder_path)
     for names in folder_names:
+        print(names)
         if "tur" in names:
             continue
         # read all training files in one folder
         train_tok_file = data_folder_path + names + "/" + names + "_train.tok"
         train_conllu_file = data_folder_path + names + "/" + names + "_train.conllu"
         train_rels_file = data_folder_path + names + "/" + names + "_train.rels"
+        output_file_train = data_folder_path + names + "/" + names + "_train.json"
+        if os.path.exists(train_tok_file):
+            preprocessing(train_tok_file, train_conllu_file, train_rels_file, output_file_train)
+
         # read all development files in one folder
         dev_tok_file = data_folder_path + names + "/" + names + "_dev.tok"
         dev_conllu_file = data_folder_path + names + "/" + names + "_dev.conllu"
         dev_rels_file = data_folder_path + names + "/" + names + "_dev.rels"
-        # conver them into .json files
-        output_file_train = data_folder_path + names + "/" + names + "_train.json"
-        preprocessing(train_tok_file, train_conllu_file, train_rels_file, output_file_train)
         output_file_dev = data_folder_path + names + "/" + names + "_dev.json"
-        preprocessing(dev_tok_file, dev_conllu_file, dev_rels_file, output_file_dev)
+        if os.path.exists(dev_tok_file):
+            preprocessing(dev_tok_file, dev_conllu_file, dev_rels_file, output_file_dev)
 
+        # read all test files in one folder
+        test_tok_file = data_folder_path + names + "/" + names + "_test.tok"
+        test_conllu_file = data_folder_path + names + "/" + names + "_test.conllu"
+        test_rels_file = data_folder_path + names + "/" + names + "_test.rels"
+        output_file_test = data_folder_path + names + "/" + names + "_test.json"
+        if os.path.exists(test_tok_file):
+            preprocessing(test_tok_file, test_conllu_file, test_rels_file, output_file_test)
 
 if __name__ == "__main__":
     '''
@@ -617,12 +628,17 @@ if __name__ == "__main__":
 
     convert_all("data/dataset/")
 
-    tur_dev_conll_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_dev.conllu"
-    tur_dev_rel_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_dev.rels"
-    tur_dev_output_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_dev.json"
-
     tur_train_conll_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_train.conllu"
     tur_train_rel_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_train.rels"
     tur_train_output_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_train.json"
-    convert_tur(tur_dev_conll_file, tur_dev_rel_file, tur_dev_output_file)
     convert_tur(tur_train_conll_file, tur_train_rel_file, tur_train_output_file)
+
+    tur_dev_conll_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_dev.conllu"
+    tur_dev_rel_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_dev.rels"
+    tur_dev_output_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_dev.json"
+    convert_tur(tur_dev_conll_file, tur_dev_rel_file, tur_dev_output_file)
+
+    tur_test_conll_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_test.conllu"
+    tur_test_rel_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_test.rels"
+    tur_test_output_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_test.json"
+    convert_tur(tur_test_conll_file, tur_test_rel_file, tur_test_output_file)
