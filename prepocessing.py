@@ -99,9 +99,13 @@ def conll_reader(file_name):
                             items.insert(1, real_string)
                         POS1 = items[3]
                         POS2 = items[4]
+                        POS3 = items[5]
+                        POS4 = items[6]
+                        POS5 = items[7]
+                        POS6 = items[8]
                         acc_4_id += 1
 
-                        tmp_sent_info.append((int(float(token_id)) + tok_id_acc + acc_4_sent, POS1, POS2))
+                        tmp_sent_info.append((int(float(token_id)) + tok_id_acc + acc_4_sent, POS1, POS2, POS3, POS4, POS5, POS6))
                     else:
                         continue
             else:
@@ -299,10 +303,14 @@ def preprocessing(tok_file, conllu_file, rel_file, output_file):
                 token_id = int(token_info[0])  # start from 1
                 POS1 = token_info[1]
                 POS2 = token_info[2]
+                POS3 = token_info[3]
+                POS4 = token_info[4]
+                POS5 = token_info[5]
+                POS6 = token_info[6]
                 token = doc_tokens[token_id - 1]
                 assert token[0] == token_id, (token[0], token_id)
                 sent_tokens.append(token[1])
-                sent_features.append((POS1, POS2))
+                sent_features.append((POS1, POS2, POS3, POS4, POS5, POS6))
                 sent_labels.append(token[2])
 
             doc_sent_tokens.append(sent_tokens)
