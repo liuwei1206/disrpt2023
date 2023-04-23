@@ -412,7 +412,10 @@ class RelDataset(Dataset):
         label_frequency = defaultdict(int)
         all_connectives = open("data/dataset/connectives.txt", "r", encoding="utf-8").readlines()
         all_connectives = [conn.strip() for conn in all_connectives]
-        conn_reps = encode_words(all_connectives, self.encoder, self.tokenizer, 10)
+        if self.encoder is not None:
+            conn_reps = encode_words(all_connectives, self.encoder, self.tokenizer, 10)
+        else:
+            conn_reps = None
 
         for text in all_texts:
             text = text.strip()
@@ -426,7 +429,10 @@ class RelDataset(Dataset):
                         continue
                     unit1 = unit_words[0]
                     unit2 = unit_words[1]
-                    sim_features = get_similarity_features(unit1, unit2, conn_reps, self.encoder, self.tokenizer)
+                    if self.encoder is not None:
+                        sim_features = get_similarity_features(unit1, unit2, conn_reps, self.encoder, self.tokenizer)
+                    else:
+                        sim_features = torch.zeros(134)
 
                     arg1 = " ".join(unit1)
                     arg2 = " ".join(unit2)

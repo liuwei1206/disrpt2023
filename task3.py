@@ -316,33 +316,40 @@ def main():
     args.output_dir = output_dir
 
     # 3.define models
+    feature_encoder = None
     if args.model_type.lower() == "base":
         if args.encoder_type.lower() == "roberta":
             config = RobertaConfig.from_pretrained(args.pretrained_path)
             tokenizer = RobertaTokenizer.from_pretrained(args.pretrained_path)
-            encoder = RobertaModel.from_pretrained(args.pretrained_path)
+            if args.feature_size > 0:
+                feature_encoder = RobertaModel.from_pretrained(args.pretrained_path)
         elif args.encoder_type.lower() == "bert":
             config = BertConfig.from_pretrained(args.pretrained_path)
             tokenizer = BertTokenizer.from_pretrained(args.pretrained_path)
-            encoder = BertModel.from_pretrained(args.pretrained_path)
+            if args.feature_size > 0:
+                feature_encoder = BertModel.from_pretrained(args.pretrained_path)
         elif args.encoder_type.lower() == "electra":
             config = ElectraConfig.from_pretrained(pretrained_path)
             tokenizer = ElectraTokenizer.from_pretrained(pretrained_path)
-            encoder = ElectraModel.from_pretrained(args.pretrained_path)
+            if args.feature_size > 0:
+                feature_encoder = ElectraModel.from_pretrained(args.pretrained_path)
         elif args.encoder_type.lower() == "xlm-roberta":
             config = XLMRobertaConfig.from_pretrained(pretrained_path)
             tokenizer = XLMRobertaTokenizer.from_pretrained(pretrained_path)
-            encoder = XLMRobertaModel.from_pretrained(pretrained_path)
+            if args.feature_size > 0:
+                feature_encoder = XLMRobertaModel.from_pretrained(pretrained_path)
         model = BaseRelClassifier(config=config, args=args)
         dataset_name = "RelDataset"
-    encoder = encoder.to(args.device)
-    encoder = fix_param(encoder)
+    if feature_encoder is not None:
+        feature_encoder = feature_encoder.to(args.device)
+        feature_encoder = fix_param(feature_encoder)
     model = model.to(args.device)
     dataset_params = {
         "tokenizer": tokenizer,
         "max_seq_length": args.max_seq_length,
         "label_dict": label_dict,
-        "encoder": encoder,
+        "encoder": feature_encoder,
+
     }
     dataset_module = __import__("task_dataset")
     MyDataset = getattr(dataset_module, dataset_name)
