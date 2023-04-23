@@ -147,7 +147,10 @@ class SegDataset2(Dataset):
                 tmp_words += tmp_subtoks
                 if tag == "Seg=B-Conn":
                     tmp_labels.append(tag)
-                    tmp_labels += ["Seg=I-Conn"] * (len(tmp_subtoks) - 1)
+                    if "Seg=I-Conn" in self.label_dict:
+                        tmp_labels += ["Seg=I-Conn"] * (len(tmp_subtoks) - 1)
+                    else:
+                        tmp_labels += ["Seg=B-Conn"] * (len(tmp_subtoks) - 1)
                 else:
                     tmp_labels += [tag] * len(tmp_subtoks)
             else:
@@ -267,7 +270,10 @@ class SegDatasetPlus(Dataset):
                 tmp_tok_pos2 += [tok_pos2] * len(tmp_subtoks)
                 if tag == "Seg=B-Conn":
                     tmp_labels.append(tag)
-                    tmp_labels += ["Seg=I-Conn"] * (len(tmp_subtoks) - 1)
+                    if "Seg=I-Conn" in self.label_dict:
+                        tmp_labels += ["Seg=I-Conn"] * (len(tmp_subtoks) - 1)
+                    else:
+                        tmp_labels += ["Seg=B-Conn"] * (len(tmp_subtoks) - 1)
                 else:
                     tmp_labels += [tag] * len(tmp_subtoks)
 
