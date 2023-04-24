@@ -54,6 +54,7 @@ def conll_reader(file_name):
         tmp_sent_id = None
         tmp_sent_type = None
         tmp_sent_info = []
+        cur_id = 0
         for line in lines:
             line = line.strip()
             if line:
@@ -67,7 +68,7 @@ def conll_reader(file_name):
                     acc_4_id = 0
                     acc_4_sent = 0
                 else:
-                    if "sent_id" in line.lower():
+                    if "sent_id" in line.lower() in line.lower() or "newutterance_id" in line.lower() in line.lower():
                         tmp_sent_id = line.split("=")[1].strip()
                         # reset the accumulator for the wrong labeld tok id
                         acc_4_sent += acc_4_id
@@ -86,6 +87,12 @@ def conll_reader(file_name):
                             tok_id_acc += 1
                         # wrong labeling issue in ./data/ita.pdtb.luna/ita.pdtb.luna_dev.conllu the token id is 14si
                         # the token's id concatenates the token's string...
+
+                        # this if condition is for spa. file, because there's no sent_id!
+                        elif "spa." in file_name and cur_id > int(float(token_id)):
+                            acc_4_sent += acc_4_id
+                            acc_4_id = 0
+                            tok_id_acc = 0
                         else:
                             real_id = ""
                             real_string = ""
@@ -103,9 +110,12 @@ def conll_reader(file_name):
                         POS4 = items[6]
                         POS5 = items[7]
                         POS6 = items[8]
+
                         acc_4_id += 1
 
-                        tmp_sent_info.append((int(float(token_id)) + tok_id_acc + acc_4_sent, POS1, POS2, POS3, POS4, POS5, POS6))
+                        tmp_sent_info.append(
+                            (int(float(token_id)) + tok_id_acc + acc_4_sent, POS1, POS2, POS3, POS4, POS5, POS6))
+                        cur_id = int(float(token_id))
                     else:
                         continue
             else:
@@ -312,7 +322,6 @@ def preprocessing(tok_file, conllu_file, rel_file, output_file):
                 sent_tokens.append(token[1])
                 sent_features.append((POS1, POS2, POS3, POS4, POS5, POS6))
                 sent_labels.append(token[2])
-
             doc_sent_tokens.append(sent_tokens)
             doc_sent_token_features.append(sent_features)
             doc_sent_token_labels.append(sent_labels)
