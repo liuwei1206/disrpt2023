@@ -196,12 +196,14 @@ def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_da
         # torch.save(model.state_dict(), os.path.join(output_dir, "pytorch_model.bin"))
     print("\nBest F1 on dev: %.4f"%(best_dev))
 
-def train_plus(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_dataloader=None, extra_feat_len=None):
+
+def train_plus(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_dataloader=None):
     # 1.prepare
     t_total = int(len(train_dataloader) * args.num_train_epochs)
     print_step = int(len(train_dataloader) // 4) + 1
     num_train_epochs = args.num_train_epochs
     optimizer, scheduler = get_optimizer(model, args, t_total)
+    extra_feat_dim = args.extra_feat_dim
 
     logger.info(" ***** Running training *****")
     logger.info("  Num examples = %d", len(train_dataloader.dataset))
@@ -226,7 +228,9 @@ def train_plus(model, args, tokenizer, train_dataloader, dev_dataloader=None, te
                 "attention_mask": batch[1],
                 "labels": batch[2],
                 "flag": "Train",
-                "extra_feat": batch[4]
+                "pos1_ids": batch[4],
+                "pos2_ids": batch[5],
+                "ft_embeds": batch[6]
             }
 
             outputs = model(**inputs)
@@ -243,27 +247,27 @@ def train_plus(model, args, tokenizer, train_dataloader, dev_dataloader=None, te
 
             if global_step % print_step == 0:
                 print(" global_step=%d, cur loss=%.4f, global avg loss=%.4f" % (
-                        global_step, logging_loss, tr_loss / global_step)
-                )
+                    global_step, logging_loss, tr_loss / global_step)
+                      )
 
         # 3. evaluate and save
         model.eval()
         if False and train_dataloader is not None:
-            score_dict = evaluate(model, args, train_dataloader, tokenizer, epoch, desc="train")
-            print("\nTrain: Epoch=%d, F1=%.4f\n"%(epoch, score_dict["f_score"]))
+            score_dict = evaluate_new(model, args, train_dataloader, tokenizer, epoch, desc="train")
+            print("\nTrain: Epoch=%d, F1=%.4f\n" % (epoch, score_dict["f_score"]))
         if dev_dataloader is not None:
-            score_dict = evaluate(model, args, dev_dataloader, tokenizer, epoch, desc="dev")
+            score_dict = evaluate_new(model, args, dev_dataloader, tokenizer, epoch, desc="dev")
             if score_dict["f_score"] > best_dev:
                 best_dev = score_dict["f_score"]
-            print("\nDev: Epoch=%d, F1=%.4f\n"%(epoch, score_dict["f_score"]))
+            print("\nDev: Epoch=%d, F1=%.4f\n" % (epoch, score_dict["f_score"]))
         if test_dataloader is not None:
-            score_dict = evaluate(model, args, test_dataloader, tokenizer, epoch, desc="test")
-            print("\nTest: Epoch=%d, F1=%.4f\n"%(epoch, score_dict["f_score"]))
+            score_dict = evaluate_new(model, args, test_dataloader, tokenizer, epoch, desc="test")
+            print("\nTest: Epoch=%d, F1=%.4f\n" % (epoch, score_dict["f_score"]))
         output_dir = os.path.join(args.output_dir, TIME_CHECKPOINT_DIR)
         output_dir = os.path.join(output_dir, f"{PREFIX_CHECKPOINT_DIR}_{epoch}")
         # os.makedirs(output_dir, exist_ok=True)
         # torch.save(model.state_dict(), os.path.join(output_dir, "pytorch_model.bin"))
-    print("\nBest F1 on dev: %.4f"%(best_dev))
+    print("\nBest F1 on dev: %.4f" % (best_dev))
 
 def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=False):
     all_input_ids = None

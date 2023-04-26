@@ -368,7 +368,6 @@ class BiLSTMCRFPlus(PreTrainedModel):
             token_type_ids=None,
             labels=None,
             flag="Train",
-            extra_feats=None,
     ):
         if self.do_freeze:
             with torch.no_grad():

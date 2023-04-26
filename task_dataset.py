@@ -196,10 +196,11 @@ class SegDatasetPlus(Dataset):
 
     def __init__(self, file_name, params):
         # donwload manually would be faster
-        #fasttext.util.download_model(params["fasttext_language"], if_exists='ignore')  # English
-        #self.ft = fasttext.load_model(params["fasttext_model"])
-        #self.ft_dict = np.load('/content/drive/MyDrive/shared_task/eng.rst.gum.npy', allow_pickle=True).item()
-        self.ft_dict = np.load(params["ft_dict"], allow_pickle=True).item()
+        # fasttext.util.download_model(params["fasttext_language"], if_exists='ignore')  # English
+        # self.ft = fasttext.load_model(params["fasttext_model"])
+        # self.ft_dict = np.load('/content/drive/MyDrive/shared_task/eng.rst.gum.npy', allow_pickle=True).item()
+        # self.ft_dict = np.load(params["ft_dict"], allow_pickle=True).item()
+        self.ft_dict = params["ft_dict"]
         self.max_seq_length = params["max_seq_length"]
         self.tokenizer = params["tokenizer"]
         self.label_dict = params["label_dict"]
@@ -211,20 +212,8 @@ class SegDatasetPlus(Dataset):
         self.pos2_lst = params["pos2_list"]
         self.pos2_convert = params["pos2_convert"]
         self.extra_feat_len = 0
-        if self.pos1_convert == "sequence":
-            self.extra_feat_len += self.max_seq_length
-        elif self.pos1_convert == "one-hot":
-            self.extra_feat_len += len(self.pos1_lst)
-
-        if self.pos2_convert == "sequence":
-            self.extra_feat_len += self.max_seq_length
-        elif self.pos2_convert == "one-hot":
-            self.extra_feat_len += len(self.pos2_lst)
-        if self.ft_dict is not None:
-            self.extra_feat_len += 300
 
         self._init_dataset(file_name)
-
 
     # read the data
     def _init_dataset(self, data_path):
@@ -271,12 +260,11 @@ class SegDatasetPlus(Dataset):
         for i in range(len(token_list)):
             tokens = token_list[i]
             tags = label_list[i]
-            #print(pos1_list)
+            # print(pos1_list)
             tok_pos1_list = pos1_list[i]
             tok_pos2_list = pos2_list[i]
             for t in range(len(tokens)):
-                print(tokens[t])
-                tmp_fast_embeds =  self.ft_dict[tokens[t]]
+                tmp_fast_embeds = self.ft_dict[tokens[t]]
 
                 tmp_subtoks = self.tokenizer.tokenize(tokens[t])
                 subword_lengths.append(len(tmp_subtoks))
@@ -304,7 +292,8 @@ class SegDatasetPlus(Dataset):
                 temp_sent_label = [default_label] + tmp_labels[:self.max_seq_length - 2] + [default_label]
                 tmp_tok_pos1 = [0] + tmp_tok_pos1[:self.max_seq_length - 2] + [0]
                 tmp_tok_pos2 = [0] + tmp_tok_pos2[:self.max_seq_length - 2] + [0]
-                tmp_fast_embeds_list = [default_ft_embeds] + tmp_fast_embeds_list[:self.max_seq_length - 2] + [default_ft_embeds]
+                tmp_fast_embeds_list = [default_ft_embeds] + tmp_fast_embeds_list[:self.max_seq_length - 2] + [
+                    default_ft_embeds]
 
                 self.sents.append(temp_sent)
                 self.labels.append(temp_sent_label)
@@ -332,6 +321,7 @@ class SegDatasetPlus(Dataset):
             og_tok_ids = np.zeros(self.max_seq_length, dtype=np.int32)
             pos1_ids = np.zeros(self.max_seq_length, dtype=np.int32)
             pos2_ids = np.zeros(self.max_seq_length, dtype=np.int32)
+
             tmp_ft_list = [np.zeros((1, 300))] * self.max_seq_length
 
             input_ids = input_ids * self.tokenizer.pad_token_id
@@ -342,7 +332,11 @@ class SegDatasetPlus(Dataset):
             og_tok_ids[:len(token_start_idxs)] = token_start_idxs
             pos1_ids[:len(tmp_tok_pos1)] = tmp_tok_pos1
             pos2_ids[:len(tmp_tok_pos2)] = tmp_tok_pos2
-            tmp_ft_list[:len(tmp_fast_embeds_list)] = tmp_fast_embeds_list
+
+            for i in range(len(tmp_ft_list)):
+                if i < len(tmp_fast_embeds_list):
+                    tmp_ft_list[i] = tmp_fast_embeds_list[i]
+
             tmp_ft_list = np.array(tmp_ft_list)
             # put together
             tmp_sent_token_ids.append(input_ids)
@@ -351,9 +345,10 @@ class SegDatasetPlus(Dataset):
             self.tok_start_idxs.append(og_tok_ids)
             self.tok_pos_list1.append(pos1_ids)
             self.tok_pos_list2.append(pos2_ids)
+
             self.fasttext_embeds.append(tmp_ft_list)
 
-            tmp_words, tmp_labels, subword_lengths, tmp_tok_pos1, tmp_tok_pos2 = [], [], [], [], []
+            tmp_words, tmp_labels, subword_lengths, tmp_tok_pos1, tmp_tok_pos2, tmp_fast_embeds_list = [], [], [], [], [], []
 
         self.input_ids = np.array(tmp_sent_token_ids)
         self.attention_mask = np.array(tmp_masks)
@@ -362,11 +357,13 @@ class SegDatasetPlus(Dataset):
         self.tok_start_idxs = np.array(self.tok_start_idxs)
         self.tok_pos_list1 = np.array(self.tok_pos_list1)
         self.tok_pos_list2 = np.array(self.tok_pos_list2)
-        self.fasttext_embeds = np.array(self.fasttext_embeds)
+        # print(len(self.fasttext_embeds))
+        # print(len(self.fasttext_embeds[0]))
+        # self.fasttext_embeds = np.array(self.fasttext_embeds)
 
-        print(self.tok_pos_list1.shape)
-        print(self.tok_pos_list2.shape)
-        #print(self.self.fasttext_embeds.shape)
+        # print(self.self.fasttext_embeds.shape)
+
+        self.extra_feat_len += len(self.tok_pos_list1[0]) + len(self.tok_pos_list2[0]) + 300
 
     def add_extra_features(self, add_prev_sent=False, add_next_sent=False, add_pos1=False, add_pos2=False,
                            add_fastText=False):
@@ -389,9 +386,12 @@ class SegDatasetPlus(Dataset):
 
     def __getitem__(self, index):
         mask = (self.attention_mask[index] > 0)
-        #extra_feats = np.concatenate((self.tok_pos_list1[index], self.tok_pos_list2[index]))
-        return self.input_ids[index], mask, self.label_ids[index], self.tok_start_idxs[index], self.tok_pos_list1[index], self.tok_pos_list2[index], self.fasttext_embeds[index]
-
+        ft_embeds = np.vstack(self.fasttext_embeds[index]).astype(np.float)
+        ft_embeds = torch.from_numpy(ft_embeds)
+        # extra_feats = np.concatenate((self.tok_pos_list1[index], self.tok_pos_list2[index]))
+        # return torch.from_numpy(self.input_ids[index]), torch.from_numpy(mask), torch.from_numpy(self.label_ids[index]), torch.from_numpy(self.tok_start_idxs[index]), torch.from_numpy(self.tok_pos_list1[index]), torch.from_numpy(self.tok_pos_list2[index]), torch.from_numpy(self.fasttext_embeds[index])
+        return self.input_ids[index], mask, self.label_ids[index], self.tok_start_idxs[index], self.tok_pos_list1[
+            index], self.tok_pos_list2[index], ft_embeds
 
 
 

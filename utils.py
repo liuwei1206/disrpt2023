@@ -217,6 +217,7 @@ def generate_ft_dict(train_file_path, dev_file_path, test_file_path, ft_model_pa
         ft_dict[token_list[i]] = ft.get_word_vector(token_list[i])
     output_path = train_file_path[:-11] + "_ftdict.npy"
     np.save(output_path, ft_dict)
+    return ft_dict
 
 
 def rel_preds_to_file(pred_ids, label_list, gold_file):
