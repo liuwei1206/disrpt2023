@@ -316,8 +316,8 @@ class BiLSTMCRFPlus(PreTrainedModel):
         self.encoder_type = args.encoder_type.lower()
         self.num_labels = args.num_labels
         self.extra_feat_dim = args.extra_feat_dim
-        self.pos1_type = args.pos1_type
-        self.pos2_type = args.pos2_type
+        self.pos1_type = args.pos1_convert
+        self.pos2_type = args.pos2_convert
 
         self.pos1_vocab_len = args.pos1_vocab_len
         self.pos2_vocab_len = args.pos2_vocab_len
@@ -329,9 +329,9 @@ class BiLSTMCRFPlus(PreTrainedModel):
         self.pos2_encoder = None
 
         if self.encoder_type == "roberta":
-            self.encoder = RobertaModel.from_pretrained(args.pretrained_model, config=config)
+            self.encoder = RobertaModel.from_pretrained(args.pretrained_path, config=config)
         elif self.encoder_type == "bert":
-            self.encoder = BertModel.from_pretrained(args.pretrained_model, config=config)
+            self.encoder = BertModel.from_pretrained(args.pretrained_path, config=config)
         self.lstm = nn.LSTM(
             input_size=config.hidden_size, hidden_size=config.hidden_size,
             num_layers=2, bidirectional=True, batch_first=True
@@ -422,7 +422,6 @@ class BiLSTMCRFPlus(PreTrainedModel):
             res.append(tmp_embeds)
         res = np.array(res)
         return res
-
 
 
 

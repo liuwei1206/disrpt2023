@@ -158,20 +158,15 @@ def seg_preds_to_file_new(all_input_ids, all_label_ids, all_attention_mask, all_
     pred_labels = []
 
     for i in range(len(all_attention_mask)):
-        tmp_idx = [idx for idx in all_tok_idxs[i] if idx > 0]
-        point_loc = np.argwhere(all_input_ids[i] == 102)
-        if len(point_loc):
-            tmp_idx.append(point_loc[0][0])
-        og_toks_ids = all_input_ids[i][tmp_idx]
-        tmp_toks = tokenizer.convert_ids_to_tokens(og_toks_ids)
 
+        tmp_idx = [idx for idx in all_tok_idxs[i] if idx > 0]
+
+        og_toks_ids = all_input_ids[i][tmp_idx]
+        og_labels = all_label_ids[i][tmp_idx]
+        tmp_toks = tokenizer.convert_ids_to_tokens(og_toks_ids)
         for j in range(len(tmp_toks)):
-            if tmp_toks[j] == "[SEP]":
-                og_tokens.append(".")
-                pred_labels.append("_")
-            else:
-                og_tokens.append(tmp_toks[j])
-                pred_labels.append(label_id_dict[int(all_label_ids[i][j])])
+            og_tokens.append(tmp_toks[j])
+            pred_labels.append(label_id_dict[int(og_labels[j])])
 
     pointer = 0
     for line in all_doc_data:

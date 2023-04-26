@@ -45,6 +45,7 @@ PREFIX_CHECKPOINT_DIR = "checkpoint"
 import warnings
 warnings.filterwarnings('ignore')
 
+
 def get_argparse():
     parser = argparse.ArgumentParser()
 
@@ -61,6 +62,7 @@ def get_argparse():
     parser.add_argument("--do_dev", default=False, action="store_true")
     parser.add_argument("--do_test", default=False, action="store_true")
     parser.add_argument("--do_freeze", default=False, action="store_true")
+    parser.add_argument("--run_plus", default=False, action="store_true")
     parser.add_argument("--train_batch_size", default=8, type=int)
     parser.add_argument("--eval_batch_size", default=24, type=int)
     parser.add_argument("--max_seq_length", default=256, type=int)
@@ -71,7 +73,10 @@ def get_argparse():
     parser.add_argument("--weight_decay", default=0.1, type=float)
     parser.add_argument("--warmup_ratio", default=0.06, type=float)
     parser.add_argument("--seed", default=106524, type=int, help="random seed")
+    parser.add_argument("--extra_feat_dim", default=400, type=int)
 
+    parser.add_argument("--pos1_convert", default="sequence", type=str, help="one-hot or sequence")
+    parser.add_argument("--pos2_convert", default="sequence", type=str, help="one-hot or sequence")
     return parser
 
 
@@ -374,9 +379,13 @@ def main():
         # pretrained_path = "xlm-roberta-large"
         encoder_type = "bert"
         pretrained_path = "bert-base-german-cased"
+
     elif lang_type.lower() == "eng":
         encoder_type = "bert" # "electra"
         pretrained_path = "bert-base-cased" # "google/electra-large-discriminator"
+        fasttext_language = "en"
+        fasttext_model = "cc.en.300.bin"
+
     elif lang_type.lower() == "eus":
         encoder_type = "bert"
         pretrained_path = "ixa-ehu/berteus-base-cased"
@@ -427,6 +436,7 @@ def main():
     args.output_dir = output_dir
 
     # 2.define models
+
     if args.model_type.lower() == "base":
         if args.encoder_type.lower() == "roberta":
             config = RobertaConfig.from_pretrained(pretrained_path)
@@ -440,7 +450,7 @@ def main():
         elif args.encoder_type.lower() == "xlm-roberta":
             config = XLMRobertaConfig.from_pretrained(pretrained_path)
             tokenizer = XLMRobertaTokenizer.from_pretrained(pretrained_path)
-        model = BaseSegClassifier(config=config, args=args)
+
         dataset_name = "SegDataset"
     elif args.model_type.lower() == "bilstm+crf":
         if args.encoder_type.lower() == "roberta":
@@ -455,13 +465,12 @@ def main():
         elif args.encoder_type.lower() == "xlm-roberta":
             config = XLMRobertaConfig.from_pretrained(pretrained_path)
             tokenizer = XLMRobertaTokenizer.from_pretrained(pretrained_path)
-        model = BiLSTMCRF(config=config, args=args)
-        dataset_name = "SegDataset"
+
+        #dataset_name = "SegDataset"
+        dataset_name = "SegDatasetPlus"
         # you can test my new dataset by using folowing code
         # dataset_name = "SegDataset2"
         # now you can aplly SegDatasetPlus
-    model = model.to(args.device)
-    args.tokenizer = tokenizer
 
     if args.run_plus:
         dataset_params = {
@@ -474,23 +483,41 @@ def main():
             "pos2_dict": tok_pos_2_dict,
             "pos2_list": tok_pos_2,
             "pos2_convert": args.pos2_convert,
+            "fasttext_language": fasttext_language,
+            "fasttext_model": fasttext_model,
         }
-        dataset_module = __import__("task_dataset")
-        MyDataset = getattr(dataset_module, dataset_name)
-        extra_feat_len = MyDataset.get_extra_feat_len()
-        args.extra_feat_dim = extra_feat_len
+
+        #dataset_module = __import__("task_dataset")
+        #MyDataset = getattr(dataset_module, dataset_name)
+        MyDataset = SegDatasetPlus
     else:
         dataset_params = {
             "tokenizer": tokenizer,
             "max_seq_length": args.max_seq_length,
             "label_dict": label_dict,
         }
-        dataset_module = __import__("task_dataset")
-        MyDataset = getattr(dataset_module, dataset_name)
+        #dataset_module = __import__("task_dataset")
+        #MyDataset = getattr(dataset_module, dataset_name)
+        MyDataset = SegDataset
+    if args.model_type.lower() == "base":
+        model = BaseSegClassifier(config=config, args=args)
+    elif args.model_type.lower() == "bilstm+crf":
+        args.pos1_vocab_len = len(tok_pos_1)
+        args.pos2_vocab_len = len(tok_pos_2)
+        # for the sequence mode, to control the length of the embedding
+        args.pos1_dim = 50
+        args.pos2_dim = 50
+        model = BiLSTMCRFPlus(config=config, args=args)
+    model = model.to(args.device)
+    args.tokenizer = tokenizer
+
 
     if args.do_train:
         train_dataset = MyDataset(train_data_file, params=dataset_params)
         dev_dataset = MyDataset(dev_data_file, params=dataset_params)
+        if args.run_plus:
+            extra_feat_len = MyDataset.get_extra_feat_len()
+            args.extra_feat_dim = extra_feat_len
         print(test_data_file)
         if os.path.exists(test_data_file):
             print("++in++")
