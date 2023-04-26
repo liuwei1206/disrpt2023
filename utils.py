@@ -5,6 +5,8 @@ from collections import defaultdict
 import torch
 import torch.nn.functional as F
 import numpy as np
+import fasttext
+import fasttext.util
 
 def token_labels_from_file(file_name):
     labels = set()
@@ -193,6 +195,28 @@ def seg_preds_to_file_new(all_input_ids, all_label_ids, all_attention_mask, all_
             else:
                 f.write(line)
 
+def generate_ft_dict(train_file_path, dev_file_path, test_file_path, ft_model_path, ft_lang=None):
+    all_files = [train_file_path, dev_file_path, test_file_path]
+    #fasttext.util.download_model('ft_lang', if_exists='ignore') 
+    #ft = fasttext.load_model(ft_model_path)
+    ft = fasttext.load_model(ft_model_path)
+    all_texts = []
+    token_list = []
+    ft_dict = {}
+    for path in all_files:
+        with open(path, 'r') as f:
+            for line in f.readlines():
+                line_content = json.loads(line)
+                all_texts.append(line_content)
+        for doc in all_texts:
+            doc_token_list = doc["doc_sents"]
+            for i in range(len(doc_token_list)):
+                for j in range(len(doc_token_list[i])):
+                    token_list.append(doc_token_list[i][j])  
+    for i in range(len(token_list)):
+        ft_dict[token_list[i]] = ft.get_word_vector(token_list[i])
+    output_path = train_file_path[:-11] + "_ftdict.npy"
+    np.save(output_path, ft_dict)
 
 
 def rel_preds_to_file(pred_ids, label_list, gold_file):

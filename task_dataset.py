@@ -195,9 +195,11 @@ class SegDatasetPlus(Dataset):
     '''Generate the dataset for task1 Segmentation'''
 
     def __init__(self, file_name, params):
-        fasttext.util.download_model(params["fasttext_type"], if_exists='ignore')  # English
-        self.ft = fasttext.load_model(params["fasttext_dict"])
-
+        # donwload manually would be faster
+        #fasttext.util.download_model(params["fasttext_language"], if_exists='ignore')  # English
+        #self.ft = fasttext.load_model(params["fasttext_model"])
+        #self.ft_dict = np.load('/content/drive/MyDrive/shared_task/eng.rst.gum.npy', allow_pickle=True).item()
+        self.ft_dict = np.load(params["ft_dict"], allow_pickle=True).item()
         self.max_seq_length = params["max_seq_length"]
         self.tokenizer = params["tokenizer"]
         self.label_dict = params["label_dict"]
@@ -209,6 +211,17 @@ class SegDatasetPlus(Dataset):
         self.pos2_lst = params["pos2_list"]
         self.pos2_convert = params["pos2_convert"]
         self.extra_feat_len = 0
+        if self.pos1_convert == "sequence":
+            self.extra_feat_len += self.max_seq_length
+        elif self.pos1_convert == "one-hot":
+            self.extra_feat_len += len(self.pos1_lst)
+
+        if self.pos2_convert == "sequence":
+            self.extra_feat_len += self.max_seq_length
+        elif self.pos2_convert == "one-hot":
+            self.extra_feat_len += len(self.pos2_lst)
+        if self.ft_dict is not None:
+            self.extra_feat_len += 300
 
         self._init_dataset(file_name)
 
@@ -258,17 +271,23 @@ class SegDatasetPlus(Dataset):
         for i in range(len(token_list)):
             tokens = token_list[i]
             tags = label_list[i]
-            tok_pos1 = self.pos1_dict[pos1_list[i]]
-            tok_pos2 = self.pos2_dict[pos2_list[i]]
+            #print(pos1_list)
+            tok_pos1_list = pos1_list[i]
+            tok_pos2_list = pos2_list[i]
             for t in range(len(tokens)):
-                tmp_fast_embeds =  self.ft.get_word_vector(tokens[t])
+                print(tokens[t])
+                tmp_fast_embeds =  self.ft_dict[tokens[t]]
+
                 tmp_subtoks = self.tokenizer.tokenize(tokens[t])
                 subword_lengths.append(len(tmp_subtoks))
                 tmp_words += tmp_subtoks
                 tmp_fast_embeds_list += [tmp_fast_embeds] * len(tmp_subtoks)
 
-                tmp_tok_pos1 += [tok_pos1[t]] * len(tmp_subtoks)
-                tmp_tok_pos2 += [tok_pos2[t]] * len(tmp_subtoks)
+                tok_pos1 = self.pos1_dict[tok_pos1_list[t]]
+                tok_pos2 = self.pos2_dict[tok_pos2_list[t]]
+
+                tmp_tok_pos1 += [tok_pos1] * len(tmp_subtoks)
+                tmp_tok_pos2 += [tok_pos2] * len(tmp_subtoks)
 
                 if tags[t] == "Seg=B-Conn":
                     tmp_labels.append(tags[t])
@@ -319,10 +338,11 @@ class SegDatasetPlus(Dataset):
             input_ids[:len(tmp_tok_ids)] = tmp_tok_ids
             attention_mask[:len(tmp_tok_ids)] = 1
             label_ids[:len(tmp_label_ids)] = tmp_label_ids
+
             og_tok_ids[:len(token_start_idxs)] = token_start_idxs
-            pos1_ids[:len(token_start_idxs)] = tmp_tok_pos1
-            pos2_ids[:len(token_start_idxs)] = tmp_tok_pos2
-            tmp_ft_list[:len(token_start_idxs)] = tmp_fast_embeds_list
+            pos1_ids[:len(tmp_tok_pos1)] = tmp_tok_pos1
+            pos2_ids[:len(tmp_tok_pos2)] = tmp_tok_pos2
+            tmp_ft_list[:len(tmp_fast_embeds_list)] = tmp_fast_embeds_list
             tmp_ft_list = np.array(tmp_ft_list)
             # put together
             tmp_sent_token_ids.append(input_ids)
@@ -344,7 +364,9 @@ class SegDatasetPlus(Dataset):
         self.tok_pos_list2 = np.array(self.tok_pos_list2)
         self.fasttext_embeds = np.array(self.fasttext_embeds)
 
-        self.extra_feat_len += len(self.tok_pos_list1[0][0]) + len(self.tok_pos_list2[0][0]) + len(self.fasttext_embeds[0][0])
+        print(self.tok_pos_list1.shape)
+        print(self.tok_pos_list2.shape)
+        #print(self.self.fasttext_embeds.shape)
 
     def add_extra_features(self, add_prev_sent=False, add_next_sent=False, add_pos1=False, add_pos2=False,
                            add_fastText=False):

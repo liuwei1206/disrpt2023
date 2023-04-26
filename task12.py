@@ -23,7 +23,7 @@ from transformers.models.electra import ElectraConfig, ElectraTokenizer
 from transformers import XLMRobertaConfig, XLMRobertaTokenizer
 
 from utils import *
-from task_dataset import SegDataset
+from task_dataset import *
 from models import *
 from seg_eval import get_scores
 
@@ -379,6 +379,8 @@ def main():
         # pretrained_path = "xlm-roberta-large"
         encoder_type = "bert"
         pretrained_path = "bert-base-german-cased"
+        fasttext_language = "de"
+        fasttext_model = "cc.de.300.bin"
 
     elif lang_type.lower() == "eng":
         encoder_type = "bert" # "electra"
@@ -389,33 +391,63 @@ def main():
     elif lang_type.lower() == "eus":
         encoder_type = "bert"
         pretrained_path = "ixa-ehu/berteus-base-cased"
+        fasttext_language = "eu"
+        fasttext_model = "cc.eu.300.bin"
+
     elif lang_type.lower() == "fas":
         encoder_type = "bert"
         pretrained_path = "HooshvareLab/bert-fa-base-uncased"
+        fasttext_language = "fa"
+        fasttext_model = "cc.fa.300.bin"
+
     elif lang_type.lower() == "fra":
         encoder_type = "xlm-roberta"
         pretrained_path = "xlm-roberta-large"
+        fasttext_language = "fr"
+        fasttext_model = "cc.fr.300.bin"
+
     elif lang_type.lower() == "ita":
         encoder_type = "bert"
         pretrained_path = "dbmdz/bert-base-italian-cased"
+        fasttext_language = "it"
+        fasttext_model = "cc.it.300.bin"
+
     elif lang_type.lower() == "nld":
         encoder_type = "roberta"
         pretrained_path = "pdelobelle/robbert-v2-dutch-base"
+        fasttext_language = "nl"
+        fasttext_model = "cc.nl.300.bin"
+
     elif lang_type.lower() == "por":
         encoder_type = "bert"
         pretrained_path = "neuralmind/bert-base-portuguese-cased"
+        fasttext_language = "pt"
+        fasttext_model = "cc.pt.300.bin"
+
     elif lang_type.lower() == "rus":
         encoder_type = "bert"
         pretrained_path = "DeepPavlov/rubert-base-cased"
+        fasttext_language = "ru"
+        fasttext_model = "cc.ru.300.bin"
+
     elif lang_type.lower() == "spa":
         encoder_type = "bert"
         pretrained_path = "dccuchile/bert-base-spanish-wwm-cased"
+        fasttext_language = "es"
+        fasttext_model = "cc.es.300.bin"
+
     elif lang_type.lower() == "tur":
         encoder_type = "bert"
         pretrained_path = "dbmdz/bert-base-turkish-cased"
+        fasttext_language = "tr"
+        fasttext_model = "cc.tr.300.bin"
+
     elif lang_type.lower() == "zho":
         encoder_type = "bert"
         pretrained_path = "bert-base-chinese"
+        fasttext_language = "zh"
+        fasttext_model = "cc.zh.300.bin"
+
     args.encoder_type = encoder_type
     args.pretrained_path = pretrained_path
 
@@ -434,6 +466,9 @@ def main():
     output_dir = os.path.join(output_dir, "{}+{}".format(args.model_type, args.encoder_type))
     os.makedirs(output_dir, exist_ok=True)
     args.output_dir = output_dir
+
+    ft_model_path = os.path.join(data_dir, fasttext_model)
+    ft_dict = generate_ft_dict(train_data_file, dev_data_file, test_data_file, ft_model_path, fasttext_language)
 
     # 2.define models
 
@@ -485,6 +520,7 @@ def main():
             "pos2_convert": args.pos2_convert,
             "fasttext_language": fasttext_language,
             "fasttext_model": fasttext_model,
+            "ft_dict": ft_dict,
         }
 
         #dataset_module = __import__("task_dataset")
