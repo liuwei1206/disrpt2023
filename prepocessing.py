@@ -1,5 +1,8 @@
 import os
 import json
+import io
+
+from utils import *
 
 
 def tok_reader(file_name):
@@ -598,8 +601,6 @@ def convert_all(data_folder_path):
     folder_names = os.listdir(data_folder_path)
     for names in folder_names:
         print(names)
-        if "tur" in names:
-            continue
         # read all training files in one folder
         train_tok_file = data_folder_path + names + "/" + names + "_train.tok"
         train_conllu_file = data_folder_path + names + "/" + names + "_train.conllu"
@@ -643,7 +644,9 @@ if __name__ == "__main__":
 
     '''
 
-    convert_all("data/dataset/")
+    dataset_path = "data/dataset/"
+    '''
+    convert_all(dataset_path)
 
     tur_train_conll_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_train.conllu"
     tur_train_rel_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_train.rels"
@@ -659,3 +662,77 @@ if __name__ == "__main__":
     tur_test_rel_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_test.rels"
     tur_test_output_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_test.json"
     convert_tur(tur_test_conll_file, tur_test_rel_file, tur_test_output_file)
+    '''
+
+    '''
+    # This part of code is for generating one dataset's fasttext embedding, everytime when you want to
+    # generate the fasttext embedding from one dataset, please download it first!
+
+    #missing fasttext dictionary for eng.pdtb.pdtb, eng.rst.rstdt, tur.pdtb.tdb, tur.pdtb.tedm, zho.pdtb.cdtb
+
+    # choose one dataset that you want to generate fasttext dictionary
+    ft_target_dataset = "zho.rst.sctb"
+    ft_train_path = dataset_path + ft_target_dataset + "/" + ft_target_dataset + "_train.json"
+    ft_dev_path = dataset_path + ft_target_dataset + "/" + ft_target_dataset + "_dev.json"
+    ft_test_path = dataset_path + ft_target_dataset + "/" + ft_target_dataset + "_test.json"
+    ft_output_path = dataset_path + ft_target_dataset + "/" + ft_target_dataset + "_ftdict.npy"
+
+    ft_target_language = ft_target_dataset.split(".")[0]
+    print(ft_target_language)
+
+    if ft_target_language.lower() == "deu":
+        fasttext_language = "de"
+        fasttext_model = "cc.de.300.bin"
+
+    elif ft_target_language.lower() == "eng":
+        fasttext_language = "en"
+        fasttext_model = "cc.en.300.bin"
+
+    elif ft_target_language.lower() == "eus":
+        fasttext_language = "eu"
+        fasttext_model = "cc.eu.300.bin"
+
+    elif ft_target_language.lower() == "fas":
+        fasttext_language = "fa"
+        fasttext_model = "cc.fa.300.bin"
+
+    elif ft_target_language.lower() == "fra":
+        fasttext_language = "fr"
+        fasttext_model = "cc.fr.300.bin"
+
+    elif ft_target_language.lower() == "ita":
+        fasttext_language = "it"
+        fasttext_model = "cc.it.300.bin"
+
+    elif ft_target_language.lower() == "nld":
+        fasttext_language = "nl"
+        fasttext_model = "cc.nl.300.bin"
+
+    elif ft_target_language.lower() == "por":
+        fasttext_language = "pt"
+        fasttext_model = "cc.pt.300.bin"
+
+    elif ft_target_language.lower() == "rus":
+        fasttext_language = "ru"
+        fasttext_model = "cc.ru.300.bin"
+
+    elif ft_target_language.lower() == "spa":
+        fasttext_language = "es"
+        fasttext_model = "cc.es.300.bin"
+
+    elif ft_target_language.lower() == "tur":
+        fasttext_language = "tr"
+        fasttext_model = "cc.tr.300.bin"
+
+    elif ft_target_language.lower() == "zho":
+        fasttext_language = "zh"
+        fasttext_model = "cc.zh.300.bin"
+
+    elif ft_target_language.lower() == "tha":
+        fasttext_language = "th"
+        fasttext_model = "cc.th.300.bin"
+
+    generate_ft_dict(ft_train_path, ft_dev_path, ft_test_path, ft_output_path, "data/dataset/" + fasttext_model, fasttext_language)
+    #ft_dict = np.load(ft_output_path, allow_pickle=True).item()
+    #print(ft_dict["посте"])
+    '''

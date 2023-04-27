@@ -51,7 +51,7 @@ def get_argparse():
 
     # path
     parser.add_argument("--data_dir", default="data/dataset", type=str)
-    parser.add_argument("--dataset", default="pdtb2", type=str, help="pdtb2, pdtb3")
+    parser.add_argument("--dataset", default="eng.rst.gum", type=str, help="pdtb2, pdtb3")
     parser.add_argument("--output_dir", default="data/result", type=str)
     parser.add_argument("--feature_size", default=0, type=int)
 
@@ -65,7 +65,7 @@ def get_argparse():
     parser.add_argument("--run_plus", default=False, action="store_true")
     parser.add_argument("--train_batch_size", default=8, type=int)
     parser.add_argument("--eval_batch_size", default=24, type=int)
-    parser.add_argument("--max_seq_length", default=256, type=int)
+    parser.add_argument("--max_seq_length", default=512, type=int)
     parser.add_argument("--num_train_epochs", default=10, type=int, help="training epoch")
     parser.add_argument("--learning_rate", default=3e-5, type=float, help="learning rate")
     parser.add_argument("--dropout", default=0.1, type=float)
@@ -383,74 +383,51 @@ def main():
         # pretrained_path = "xlm-roberta-large"
         encoder_type = "bert"
         pretrained_path = "bert-base-german-cased"
-        fasttext_language = "de"
-        fasttext_model = "cc.de.300.bin"
 
     elif lang_type.lower() == "eng":
         encoder_type = "bert" # "electra"
         pretrained_path = "bert-base-cased" # "google/electra-large-discriminator"
-        fasttext_language = "en"
-        fasttext_model = "cc.en.300.bin"
 
     elif lang_type.lower() == "eus":
         encoder_type = "bert"
         pretrained_path = "ixa-ehu/berteus-base-cased"
-        fasttext_language = "eu"
-        fasttext_model = "cc.eu.300.bin"
 
     elif lang_type.lower() == "fas":
         encoder_type = "bert"
         pretrained_path = "HooshvareLab/bert-fa-base-uncased"
-        fasttext_language = "fa"
-        fasttext_model = "cc.fa.300.bin"
 
     elif lang_type.lower() == "fra":
         encoder_type = "xlm-roberta"
         pretrained_path = "xlm-roberta-large"
-        fasttext_language = "fr"
-        fasttext_model = "cc.fr.300.bin"
 
     elif lang_type.lower() == "ita":
         encoder_type = "bert"
         pretrained_path = "dbmdz/bert-base-italian-cased"
-        fasttext_language = "it"
-        fasttext_model = "cc.it.300.bin"
 
     elif lang_type.lower() == "nld":
         encoder_type = "roberta"
         pretrained_path = "pdelobelle/robbert-v2-dutch-base"
-        fasttext_language = "nl"
-        fasttext_model = "cc.nl.300.bin"
 
     elif lang_type.lower() == "por":
         encoder_type = "bert"
         pretrained_path = "neuralmind/bert-base-portuguese-cased"
-        fasttext_language = "pt"
-        fasttext_model = "cc.pt.300.bin"
 
     elif lang_type.lower() == "rus":
         encoder_type = "bert"
         pretrained_path = "DeepPavlov/rubert-base-cased"
-        fasttext_language = "ru"
-        fasttext_model = "cc.ru.300.bin"
 
     elif lang_type.lower() == "spa":
         encoder_type = "bert"
         pretrained_path = "dccuchile/bert-base-spanish-wwm-cased"
-        fasttext_language = "es"
-        fasttext_model = "cc.es.300.bin"
 
     elif lang_type.lower() == "tur":
         encoder_type = "bert"
         pretrained_path = "dbmdz/bert-base-turkish-cased"
-        fasttext_language = "tr"
-        fasttext_model = "cc.tr.300.bin"
 
     elif lang_type.lower() == "zho":
         encoder_type = "bert"
         pretrained_path = "bert-base-chinese"
-        fasttext_language = "zh"
-        fasttext_model = "cc.zh.300.bin"
+
 
     args.encoder_type = encoder_type
     args.pretrained_path = pretrained_path
@@ -471,8 +448,12 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
     args.output_dir = output_dir
 
-    ft_model_path = os.path.join(data_dir, fasttext_model)
-    ft_dict = generate_ft_dict(train_data_file, dev_data_file, test_data_file, ft_model_path, fasttext_language)
+    ft_model_path = "./ft_dicts/" + args.dataset + "_ftdict.npy"
+    #ft_model_path = os.path.join(data_dir, ft_file_path)
+    if os.path.exists(ft_model_path):
+        ft_dict = np.load(ft_model_path, allow_pickle=True).item()
+    else:
+        print("fasttext embedding file is not in the right dirctory or not exist at all!!!! Please fix it!!!!")
 
     # 2.define models
 
@@ -580,10 +561,10 @@ def main():
         time_dir = "good"
         temp_dir = os.path.join(args.output_dir, time_dir)
         temp_file = os.path.join(temp_dir, "checkpoint_{}/pytorch_model.bin")
-        if do_dev:
+        if args.do_dev:
             dev_dataset = MyDataset(dev_data_file, params=dataset_params)
             dev_dataloader = get_dataloader(dev_dataset, args, mode="dev")
-        if do_test:
+        if args.do_test:
             test_dataset = MyDataset(test_data_file, params=dataset_params)
             test_dataloader = get_dataloader(test_dataset, args, mode="test")
 
