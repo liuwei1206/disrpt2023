@@ -503,8 +503,6 @@ def main():
             "pos2_dict": tok_pos_2_dict,
             "pos2_list": tok_pos_2,
             "pos2_convert": args.pos2_convert,
-            "fasttext_language": fasttext_language,
-            "fasttext_model": fasttext_model,
             "ft_dict": ft_dict,
         }
 
@@ -537,12 +535,26 @@ def main():
         train_dataset = MyDataset(train_data_file, params=dataset_params)
         dev_dataset = MyDataset(dev_data_file, params=dataset_params)
         if args.run_plus:
-            extra_feat_len = MyDataset.get_extra_feat_len()
+            extra_feat_len = train_dataset.get_extra_feat_len()
             args.extra_feat_dim = extra_feat_len
         print(test_data_file)
         if os.path.exists(test_data_file):
             print("++in++")
-            test_dataset = MyDataset(test_data_file, params=dataset_params)
+            if args.run_plus:
+                tok_pos_1_test, tok_pos_2_test, tok_pos_1_dict_test, tok_pos_2_dict_test = token_pos_from_file(test_data_file)
+                test_dataset_params = {
+                    "tokenizer": tokenizer,
+                    "max_seq_length": args.max_seq_length,
+                    "label_dict": label_dict,
+                    "pos1_dict": tok_pos_1_dict_test,
+                    "pos1_list": tok_pos_1_test,
+                    "pos1_convert": args.pos1_convert,
+                    "pos2_dict": tok_pos_2_dict_test,
+                    "pos2_list": tok_pos_2_test,
+                    "pos2_convert": args.pos2_convert,
+                    "ft_dict": ft_dict,
+                }
+            test_dataset = MyDataset(test_data_file, params=test_dataset_params)
         else:
             test_dataset = None
         train_dataloader = get_dataloader(train_dataset, args, mode="train")
@@ -552,7 +564,7 @@ def main():
         else:
             test_dataloader = None
         if args.run_plus:
-            train_plus(model, args, tokenizer, train_dataloader, dev_dataloader, test_dataloader, extra_feat_len)
+            train_plus(model, args, tokenizer, train_dataloader, dev_dataloader, test_dataloader)
         else:
             train(model, args, tokenizer, train_dataloader, dev_dataloader, test_dataloader)
 

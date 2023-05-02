@@ -10,8 +10,8 @@ from torch.autograd import grad
 from torch import nn
 from torch.nn import CrossEntropyLoss
 # I modified the name of the pakege from TorchCRF to torchcrf, since my computer has only this version of crf...
-# from torchcrf import CRF
-from TorchCRF import CRF
+from torchcrf import CRF
+#from TorchCRF import CRF
 
 from transformers import PreTrainedModel
 from transformers.models.roberta import RobertaModel
@@ -328,6 +328,8 @@ class BiLSTMCRFPlus(PreTrainedModel):
         self.pos1_encoder = None
         self.pos2_encoder = None
 
+        self.do_train = args.do_train
+
         if self.encoder_type == "roberta":
             self.encoder = RobertaModel.from_pretrained(args.pretrained_path, config=config)
         elif self.encoder_type == "bert":
@@ -367,7 +369,7 @@ class BiLSTMCRFPlus(PreTrainedModel):
             attention_mask=None,
             token_type_ids=None,
             labels=None,
-            flag="Train",
+            flag="train",
     ):
         if self.do_freeze:
             with torch.no_grad():
@@ -390,12 +392,15 @@ class BiLSTMCRFPlus(PreTrainedModel):
         # extra_feats = extra_feats.unsqueeze(1)
         sequence_outputs = torch.cat([sequence_outputs, pos1_embeds, pos2_embeds, ft_embeds], dim=-1)
 
-        sequence_outputs = self.linear_mid(sequence_outputs)
+        sequence_outputs = self.linear_mid(sequence_outputs.float())
         sequence_outputs, _ = self.lstm(sequence_outputs)
         feats = self.linear(sequence_outputs)
 
-        if flag.lower() == "trian":
+        if self.do_train:
+            attention_mask = torch.BoolTensor(attention_mask)
+            labels = labels.long()
             loss = self.crf.forward(feats, labels, attention_mask).mean()
+            print("_______________________________________________")
             loss = -loss
             outputs = (loss,)
         else:
@@ -407,8 +412,9 @@ class BiLSTMCRFPlus(PreTrainedModel):
     def pos_onthot_encoder(self, pos_ids, pos_vocab_len, pos_dim=512):
         res = []
         for i in range(len(pos_ids)):
-            tmp_pos = [0] * pos_vocab_len
-            tmp_pos[pos_ids[i]] = 1
+            for j in range(len(pos_ids[i])):
+                tmp_pos = [0] * pos_vocab_len
+                tmp_pos[pos_ids[i][j]] = 1
             res.append(np.array(tmp_pos))
         res = np.array(res)
         return res
@@ -417,15 +423,11 @@ class BiLSTMCRFPlus(PreTrainedModel):
         res = []
         pos_encoder = nn.Embedding(pos_vocab_len, pos_dim)
         for i in range(len(pos_ids)):
-            tmp_embeds = torch.LongTensor([pos_ids[i]])
-            res.append(tmp_embeds)
-        res = np.array(res)
+            tmp = []
+            for j in range(len(pos_ids[i])):
+                tmp_embeds = pos_encoder(torch.tensor([pos_ids[i][j]]))
+                tmp.append(tmp_embeds[0])
+            tmp = torch.stack(tmp, dim=0)
+            res.append(tmp)
+        res = torch.stack(res, dim=0)
         return res
-
-
-
-
-
-
-
-

@@ -3,13 +3,15 @@
 # zho.dep.scidtb, zho.pdtb.cdtb, zho.rst.gcdt, zho.rst.sctb
 # <<"COMMENT"
 python3 task12.py --do_train \
-                  --dataset="zho.rst.sctb" \
+                  --dataset="eng.rst.gum" \
                   --max_seq_length=512 \
                   --train_batch_size=16 \
                   --eval_batch_size=32 \
                   --learning_rate=1e-4 \
                   --dropout=0.1 \
                   --num_train_epochs=10 \
+                  --model_type=bilstm+crf \
+                  --run_plus \
 
 # COMMENT
 # eng.pdtb.pdtb

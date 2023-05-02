@@ -386,6 +386,7 @@ class SegDatasetPlus(Dataset):
 
     def __getitem__(self, index):
         mask = (self.attention_mask[index] > 0)
+        mask = torch.from_numpy(mask)
         ft_embeds = np.vstack(self.fasttext_embeds[index]).astype(np.float)
         ft_embeds = torch.from_numpy(ft_embeds)
         # extra_feats = np.concatenate((self.tok_pos_list1[index], self.tok_pos_list2[index]))

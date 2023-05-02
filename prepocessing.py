@@ -645,9 +645,10 @@ if __name__ == "__main__":
     '''
 
     dataset_path = "data/dataset/"
-    '''
+
     convert_all(dataset_path)
 
+    '''
     tur_train_conll_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_train.conllu"
     tur_train_rel_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_train.rels"
     tur_train_output_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_train.json"
