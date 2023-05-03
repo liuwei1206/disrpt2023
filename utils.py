@@ -48,7 +48,8 @@ def token_pos_from_file(file_name):
     tok_pos_2 = sorted(tok_pos_2)
     tok_pos_1_dict = {t: idx + 1 for idx, t in enumerate(tok_pos_1)}
     tok_pos_2_dict = {t: idx + 1 for idx, t in enumerate(tok_pos_2)}
-
+    tok_pos_1_dict["SEPCIAL_TOKEN"] = 0
+    tok_pos_2_dict["SEPCIAL_TOKEN"] = 0
     return tok_pos_1, tok_pos_2, tok_pos_1_dict, tok_pos_2_dict
 
 def rel_labels_from_file(file_name):
@@ -188,12 +189,13 @@ def seg_preds_to_file_new(all_input_ids, all_label_ids, all_attention_mask, all_
             new_doc_data.append('\n')
 
     pred_file = gold_tok_file.replace(".tok", "_pred.tok")
-    with open(pred_file,"w") as f:
+    with open(pred_file, "w") as f:
         for line in new_doc_data:
             if line[-1:] != "\n":
                 f.write(line + "\n")
             else:
                 f.write(line)
+    return pred_file
 
 def generate_ft_dict(train_file_path, dev_file_path, test_file_path, output_path, ft_model_path, ft_lang):
     all_files = [train_file_path, dev_file_path, test_file_path]

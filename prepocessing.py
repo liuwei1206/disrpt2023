@@ -644,7 +644,7 @@ if __name__ == "__main__":
 
     '''
 
-    dataset_path = "data/dataset/"
+    dataset_path = "./data/dataset/"
 
     convert_all(dataset_path)
 

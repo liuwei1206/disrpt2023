@@ -62,6 +62,7 @@ def get_argparse():
     parser.add_argument("--do_dev", default=False, action="store_true")
     parser.add_argument("--do_test", default=False, action="store_true")
     parser.add_argument("--do_freeze", default=False, action="store_true")
+    parser.add_argument("--do_adv", default=False, action="store_true")
     parser.add_argument("--run_plus", default=False, action="store_true")
     parser.add_argument("--train_batch_size", default=8, type=int)
     parser.add_argument("--eval_batch_size", default=24, type=int)
@@ -180,15 +181,18 @@ def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_da
         # 3. evaluate and save
         model.eval()
         if False and train_dataloader is not None:
-            score_dict = evaluate(model, args, train_dataloader, tokenizer, epoch, desc="train")
+            #score_dict = evaluate(model, args, train_dataloader, tokenizer, epoch, desc="train")
+            score_dict = evaluate_new(model, args, train_dataloader, tokenizer, epoch, desc="train")
             print("\nTrain: Epoch=%d, F1=%.4f\n"%(epoch, score_dict["f_score"]))
         if dev_dataloader is not None:
-            score_dict = evaluate(model, args, dev_dataloader, tokenizer, epoch, desc="dev")
+            #score_dict = evaluate(model, args, dev_dataloader, tokenizer, epoch, desc="dev")
+            score_dict = evaluate_new(model, args, dev_dataloader, tokenizer, epoch, desc="dev")
             if score_dict["f_score"] > best_dev:
                 best_dev = score_dict["f_score"]
             print("\nDev: Epoch=%d, F1=%.4f\n"%(epoch, score_dict["f_score"]))
         if test_dataloader is not None:
-            score_dict = evaluate(model, args, test_dataloader, tokenizer, epoch, desc="test")
+            #score_dict = evaluate(model, args, test_dataloader, tokenizer, epoch, desc="test")
+            score_dict = evaluate_new(model, args, test_dataloader, tokenizer, epoch, desc="test")
             print("\nTest: Epoch=%d, F1=%.4f\n"%(epoch, score_dict["f_score"]))
         output_dir = os.path.join(args.output_dir, TIME_CHECKPOINT_DIR)
         output_dir = os.path.join(output_dir, f"{PREFIX_CHECKPOINT_DIR}_{epoch}")
@@ -356,7 +360,7 @@ def evaluate_new(model, args, dataloader, tokenizer, epoch, desc="dev", write_fi
         gold_file = args.dev_data_file.replace(".json", ".tok")
     elif desc == "test":
         gold_file = args.test_data_file.replace(".json", ".tok")
-    print(all_pred_ids)
+    print(gold_file)
     pred_file = seg_preds_to_file_new(all_input_ids, all_label_ids, all_attention_mask, all_tok_idxs, args.tokenizer, args.label_list, gold_file)
     score_dict = get_scores(gold_file, pred_file)
 
@@ -517,12 +521,13 @@ def main():
         }
         #dataset_module = __import__("task_dataset")
         #MyDataset = getattr(dataset_module, dataset_name)
-        MyDataset = SegDataset
+        #MyDataset = SegDataset
+        MyDataset = SegDataset2
     if args.model_type.lower() == "base":
         model = BaseSegClassifier(config=config, args=args)
     elif args.model_type.lower() == "bilstm+crf":
-        args.pos1_vocab_len = len(tok_pos_1)
-        args.pos2_vocab_len = len(tok_pos_2)
+        args.pos1_vocab_len = len(tok_pos_1_dict)
+        args.pos2_vocab_len = len(tok_pos_2_dict)
         # for the sequence mode, to control the length of the embedding
         args.pos1_dim = 50
         args.pos2_dim = 50
@@ -533,10 +538,26 @@ def main():
 
     if args.do_train:
         train_dataset = MyDataset(train_data_file, params=dataset_params)
-        dev_dataset = MyDataset(dev_data_file, params=dataset_params)
+
+        tok_pos_1_dev, tok_pos_2_dev, tok_pos_1_dict_dev, tok_pos_2_dict_dev = token_pos_from_file(dev_data_file)
         if args.run_plus:
+            dev_dataset_params = {
+                "tokenizer": tokenizer,
+                "max_seq_length": args.max_seq_length,
+                "label_dict": label_dict,
+                "pos1_dict": tok_pos_1_dict_dev,
+                "pos1_list": tok_pos_1_dev,
+                "pos1_convert": args.pos1_convert,
+                "pos2_dict": tok_pos_2_dict_dev,
+                "pos2_list": tok_pos_2_dev,
+                "pos2_convert": args.pos2_convert,
+                "ft_dict": ft_dict,
+            }
+            dev_dataset = MyDataset(dev_data_file, params=dev_dataset_params)
             extra_feat_len = train_dataset.get_extra_feat_len()
             args.extra_feat_dim = extra_feat_len
+        else:
+            dev_dataset = MyDataset(dev_data_file, params=dataset_params)
         print(test_data_file)
         if os.path.exists(test_data_file):
             print("++in++")
@@ -554,7 +575,10 @@ def main():
                     "pos2_convert": args.pos2_convert,
                     "ft_dict": ft_dict,
                 }
-            test_dataset = MyDataset(test_data_file, params=test_dataset_params)
+                test_dataset = MyDataset(test_data_file, params=test_dataset_params)
+            else:
+                test_dataset = MyDataset(test_data_file, params=dataset_params)
+
         else:
             test_dataset = None
         train_dataloader = get_dataloader(train_dataset, args, mode="train")
@@ -589,10 +613,12 @@ def main():
             model.eval()
 
             if args.do_dev:
-                evaluate(model, args, dev_dataloader, tokenizer, epoch, desc="dev", write_file=True)
+                #evaluate(model, args, dev_dataloader, tokenizer, epoch, desc="dev", write_file=True)
+                evaluate_new(model, args, dev_dataloader, tokenizer, epoch, desc="dev", write_file=False)
                 # print(" Dev: acc=%.4f, p=%.4f, r=%.4f, f1=%.4f\n" % (acc, p, r, f1))
             if args.do_test:
-                evaluate(model, args, test_dataloader, tokenizer, epoch, desc="test", write_file=True)
+                #evaluate(model, args, test_dataloader, tokenizer, epoch, desc="test", write_file=True)
+                evaluate_new(model, args, test_dataloader, tokenizer, epoch, desc="test", write_file=False)
                 # print(" Test: acc=%.4f, p=%.4f, r=%.4f, f1=%.4f\n" % (acc, p, r, f1))
             print()
 

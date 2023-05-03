@@ -337,7 +337,7 @@ class SegDatasetPlus(Dataset):
                 if i < len(tmp_fast_embeds_list):
                     tmp_ft_list[i] = tmp_fast_embeds_list[i]
 
-            tmp_ft_list = np.array(tmp_ft_list)
+            #tmp_ft_list = np.array(tmp_ft_list)
             # put together
             tmp_sent_token_ids.append(input_ids)
             tmp_label_ids_list.append(label_ids)
@@ -387,7 +387,7 @@ class SegDatasetPlus(Dataset):
     def __getitem__(self, index):
         mask = (self.attention_mask[index] > 0)
         mask = torch.from_numpy(mask)
-        ft_embeds = np.vstack(self.fasttext_embeds[index]).astype(np.float)
+        ft_embeds = np.vstack(self.fasttext_embeds[index]).astype(float)
         ft_embeds = torch.from_numpy(ft_embeds)
         # extra_feats = np.concatenate((self.tok_pos_list1[index], self.tok_pos_list2[index]))
         # return torch.from_numpy(self.input_ids[index]), torch.from_numpy(mask), torch.from_numpy(self.label_ids[index]), torch.from_numpy(self.tok_start_idxs[index]), torch.from_numpy(self.tok_pos_list1[index]), torch.from_numpy(self.tok_pos_list2[index]), torch.from_numpy(self.fasttext_embeds[index])
