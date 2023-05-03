@@ -262,41 +262,64 @@ def main():
     lang_type = args.dataset.split(".")[0]
     args.lang_type = lang_type
     if lang_type.lower() == "deu":
-        encoder_type = "bert"
-        pretrained_path = "bert-base-german-cased"
+        # encoder_type = "bert"
+        # pretrained_path = "dbmdz/bert-base-german-uncased"
+        # pretrained_path = "bert-base-german-cased"
+        encoder_type = "roberta"
+        pretrained_path = "benjamin/roberta-base-wechsel-german"
     elif lang_type.lower() == "eng":
         encoder_type = "bert"
         pretrained_path = "bert-base-cased"
     elif lang_type.lower() == "eus":
-        encoder_type = "bert"
-        pretrained_path = "ixa-ehu/berteus-base-cased"
+        # encoder_type = "bert"
+        # pretrained_path = "ixa-ehu/berteus-base-cased"
+        encoder_type = "roberta"
+        pretrained_path = "ixa-ehu/roberta-eus-euscrawl-large-cased"
     elif lang_type.lower() == "fas":
         encoder_type = "bert"
         pretrained_path = "HooshvareLab/bert-fa-base-uncased"
+        # encoder_type = "roberta"
+        # pretrained_path = "HooshvareLab/roberta-fa-zwnj-base"
     elif lang_type.lower() == "fra":
         encoder_type = "bert"
         pretrained_path = "dbmdz/bert-base-french-europeana-cased"
     elif lang_type.lower() == "ita":
         encoder_type = "bert"
-        pretrained_path = "dbmdz/bert-base-italian-cased"
+        # pretrained_path = "dbmdz/bert-base-italian-cased"
+        pretrained_path = "dbmdz/bert-base-italian-uncased"
     elif lang_type.lower() == "nld":
         encoder_type = "bert"
         pretrained_path = "GroNLP/bert-base-dutch-cased"
+        # encoder_type = "roberta"
+        # pretrained_path = "pdelobelle/robbert-v2-dutch-base"
     elif lang_type.lower() == "por":
         encoder_type = "bert"
         pretrained_path = "neuralmind/bert-base-portuguese-cased"
+        # pretrained_path = "neuralmind/bert-large-portuguese-cased"
     elif lang_type.lower() == "rus":
         encoder_type = "bert"
         pretrained_path = "DeepPavlov/rubert-base-cased-sentence"
+        # pretrained_path = "DeepPavlov/rubert-base-cased"
     elif lang_type.lower() == "spa":
-        encoder_type = "bert"
-        pretrained_path = "dccuchile/bert-base-spanish-wwm-cased"
+        # encoder_type = "bert"
+        # pretrained_path = "dccuchile/bert-base-spanish-wwm-cased"
+        # pretrained_path = "dccuchile/bert-base-spanish-wwm-uncased"
+        encoder_type = "roberta"
+        pretrained_path = "bertin-project/bertin-roberta-base-spanish"
     elif lang_type.lower() == "tur":
         encoder_type = "bert"
-        pretrained_path = "dbmdz/bert-base-turkish-cased"
+        # pretrained_path = "dbmdz/bert-base-turkish-cased"
+        pretrained_path = "dbmdz/bert-base-turkish-uncased"
     elif lang_type.lower() == "zho":
         encoder_type = "bert"
-        pretrained_path = "hfl/chinese-bert-wwm-ext"
+        # pretrained_path = "bert-base-chinese"
+        # pretrained_path = "hfl/chinese-bert-wwm-ext"
+        # pretrained_path = "hfl/chinese-roberta-wwm-ext"
+        # pretrained_path = "hfl/chinese-roberta-wwm-ext-large"
+        # pretrained_path = "hfl/chinese-macbert-base"
+        pretrained_path = "hfl/chinese-macbert-large"
+    pretrained_path = os.path.join("/hits/basement/nlp/liuwi/resources/pretrained_models", pretrained_path)
+    print(pretrained_path)
     args.encoder_type = encoder_type
     args.pretrained_path = pretrained_path
 

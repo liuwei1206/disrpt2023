@@ -452,7 +452,10 @@ class RelDataset(Dataset):
                     )
                     input_ids = res.input_ids[0]
                     attention_mask = res.attention_mask[0]
-                    token_type_ids = res.token_type_ids[0]
+                    if "token_type_ids" in res:
+                        token_type_ids = res.token_type_ids[0]
+                    else:
+                        token_type_ids = torch.zeros_like(attention_mask)
                     label_frequency[unit_label] += 1
                     if unit_label in self.label_dict:
                         label_id = self.label_dict[unit_label]

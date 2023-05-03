@@ -472,9 +472,13 @@ def convert_tur(conllu_file, rel_file, output_file):
         rel_file: data path for Turkish .rel file
         output_file: data path for the output json file
     """
+    print("++++++++++++++")
     all_doc_data = conll2tok_reader_tur(conllu_file)
+    print("+++++++++++++++++++++++++++++")
     all_conll_data = conll_reader(conllu_file)
+    print("+++++++++++++++++++++++++++++++++++++++")
     all_relation_data = rel_reader(rel_file)
+    print("+++++++++++++++++++++++++++++++++++++++++++++++++++")
 
     assert len(all_doc_data) == len(all_conll_data), (len(all_doc_data), len(all_conll_data))
     # assert len(all_doc_data) == len(all_relation_data), (len(all_doc_data), len(all_relation_data))
@@ -634,8 +638,10 @@ if __name__ == "__main__":
 
     '''
 
-    convert_all("data/dataset/")
+    # convert_all("data/dataset/")
 
+    """
+    # turkish
     tur_train_conll_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_train.conllu"
     tur_train_rel_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_train.rels"
     tur_train_output_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_train.json"
@@ -650,3 +656,13 @@ if __name__ == "__main__":
     tur_test_rel_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_test.rels"
     tur_test_output_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_test.json"
     convert_tur(tur_test_conll_file, tur_test_rel_file, tur_test_output_file)
+    """
+
+    # zho
+    dataset = "zho.pdtb.cdtb"
+    for mode in ["train", "dev", "test"]:
+        tok_file = "data/dataset/{}/{}_{}.tok".format(dataset, dataset, mode)
+        conll_file = "data/dataset/{}/{}_{}.conllu".format(dataset, dataset, mode)
+        rel_file = "data/dataset/{}/{}_{}.rels".format(dataset, dataset, mode)
+        out_file = "data/dataset/{}/{}_{}.json".format(dataset, dataset, mode)
+        preprocessing(tok_file, conll_file, rel_file, out_file)

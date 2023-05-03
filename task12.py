@@ -61,6 +61,8 @@ def get_argparse():
     parser.add_argument("--do_dev", default=False, action="store_true")
     parser.add_argument("--do_test", default=False, action="store_true")
     parser.add_argument("--do_freeze", default=False, action="store_true")
+    parser.add_argument("--do_adv", default=False, action="store_true")
+
     parser.add_argument("--train_batch_size", default=8, type=int)
     parser.add_argument("--eval_batch_size", default=24, type=int)
     parser.add_argument("--max_seq_length", default=256, type=int)
@@ -417,7 +419,7 @@ def main():
     dev_data_file = os.path.join(data_dir, "{}_dev.json".format(args.dataset))
     test_data_file = os.path.join(data_dir, "{}_test.json".format(args.dataset))
     label_dict, label_list = token_labels_from_file(train_data_file)
-    tok_pos_1, tok_pos_2, tok_pos_1_dict, tok_pos_2_dict = token_pos_from_file(train_data_file)
+    # tok_pos_1, tok_pos_2, tok_pos_1_dict, tok_pos_2_dict = token_pos_from_file(train_data_file)
     args.train_data_file, args.dev_data_file, args.test_data_file = train_data_file, dev_data_file, test_data_file
     args.label_dict, args.label_list, args.num_labels = label_dict, label_list, len(label_list)
 

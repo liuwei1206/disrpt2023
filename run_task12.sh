@@ -3,7 +3,7 @@
 # zho.dep.scidtb, zho.pdtb.cdtb, zho.rst.gcdt, zho.rst.sctb
 # <<"COMMENT"
 python3 task12.py --do_train \
-                  --dataset="zho.rst.sctb" \
+                  --dataset="eng.rst.gum" \
                   --max_seq_length=512 \
                   --train_batch_size=16 \
                   --eval_batch_size=32 \
