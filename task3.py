@@ -16,10 +16,11 @@ from torch.utils.data.sampler import RandomSampler, Sampler, SequentialSampler
 from torch.utils.data.dataloader import DataLoader
 
 from transformers.optimization import AdamW, get_linear_schedule_with_warmup
-from transformers.models.roberta import RobertaConfig, RobertaTokenizer
-from transformers.models.bert import BertConfig, BertTokenizer
-from transformers.models.electra import ElectraConfig, ElectraTokenizer
-from transformers import XLMRobertaConfig, XLMRobertaTokenizer
+from transformers.models.roberta import RobertaConfig, RobertaTokenizer, RobertaModel
+from transformers.models.bert import BertConfig, BertTokenizer, BertModel
+from transformers.models.electra import ElectraConfig, ElectraTokenizer, ElectraModel
+from transformers import XLMRobertaConfig, XLMRobertaTokenizer, XLMRobertaModel
+from transformers import CamembertConfig, CamembertTokenizer, CamembertModel
 
 from utils import *
 from task_dataset import SegDataset
@@ -60,11 +61,11 @@ def get_argparse():
     parser.add_argument("--do_test", default=False, action="store_true")
     parser.add_argument("--do_freeze", default=False, action="store_true")
     parser.add_argument("--do_adv", default=False, action="store_true")
-    parser.add_argument("--train_batch_size", default=16, type=int)
+    parser.add_argument("--train_batch_size", default=16, type=int, help="move to data/config/rel_config.json")
     parser.add_argument("--eval_batch_size", default=8, type=int)
     parser.add_argument("--max_seq_length", default=128, type=int)
     parser.add_argument("--num_train_epochs", default=10, type=int, help="training epoch")
-    parser.add_argument("--learning_rate", default=1e-5, type=float, help="learning rate")
+    parser.add_argument("--learning_rate", default=1e-5, type=float, help="move to data/config/rel_config.json")
     parser.add_argument("--dropout", default=0.1, type=float)
     parser.add_argument("--max_grad_norm", default=2.0, type=float)
     parser.add_argument("--weight_decay", default=0.1, type=float)
@@ -259,8 +260,14 @@ def main():
 
     # 1. prepare pretrained path
     print("Acc on %s"%(args.dataset))
-    lang_type = args.dataset.split(".")[0]
+    lang_type = args.dataset.split(".")[0].lower()
     args.lang_type = lang_type
+    rel_config = json.load(open("data/config/rel_config.json"))
+    encoder_type = rel_config["lang_type"]["encoder_type"]
+    pretrained_path = rel_config["lang_type"]["pretrained_path"]
+    args.learning_rate = rel_config["lang_type"]["lr"]
+    args.train_batch_size = rel_config["lang_type"]["batch_size"]
+    """
     if lang_type.lower() == "deu":
         # encoder_type = "bert"
         # pretrained_path = "dbmdz/bert-base-german-uncased"
@@ -318,6 +325,7 @@ def main():
         # pretrained_path = "hfl/chinese-roberta-wwm-ext-large"
         # pretrained_path = "hfl/chinese-macbert-base"
         pretrained_path = "hfl/chinese-macbert-large"
+    """
     pretrained_path = os.path.join("/hits/basement/nlp/liuwi/resources/pretrained_models", pretrained_path)
     print(pretrained_path)
     args.encoder_type = encoder_type
@@ -361,6 +369,11 @@ def main():
             tokenizer = XLMRobertaTokenizer.from_pretrained(pretrained_path)
             if args.feature_size > 0:
                 feature_encoder = XLMRobertaModel.from_pretrained(pretrained_path)
+        elif args.encoder_type.lower() == "Camambert":
+            config = CamembertConfig.from_pretrained(pretrained_path)
+            tokenizer = CamembertTokenizer.from_pretrained(pretrained_path)
+            if args.feature_size > 0:
+                feature_encoder = CamembertModel.from_pretrained(pretrained_path)
         model = BaseRelClassifier(config=config, args=args)
         dataset_name = "RelDataset"
     if feature_encoder is not None:
