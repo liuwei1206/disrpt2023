@@ -313,7 +313,7 @@ def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=F
         gold_file = args.dev_data_file.replace(".json", ".tok")
     elif desc == "test":
         gold_file = args.test_data_file.replace(".json", ".tok")
-    print(all_pred_ids)
+    # print(all_pred_ids)
     pred_file = seg_preds_to_file(all_input_ids, all_pred_ids, all_attention_mask, args.tokenizer, args.label_list, gold_file)
     score_dict = get_scores(gold_file, pred_file)
 
@@ -391,7 +391,8 @@ def main():
 
     elif lang_type.lower() == "eng":
         encoder_type = "bert" # "electra"
-        pretrained_path = "bert-base-cased" # "google/electra-large-discriminator"
+        # pretrained_path = "bert-base-cased" # "google/electra-large-discriminator"
+        pretrained_path = "bert-base-uncased"
 
     elif lang_type.lower() == "eus":
         encoder_type = "bert"
@@ -433,7 +434,7 @@ def main():
         encoder_type = "bert"
         pretrained_path = "bert-base-chinese"
 
-
+    pretrained_path = os.path.join("/hits/basement/nlp/liuwi/resources/pretrained_models", pretrained_path)
     args.encoder_type = encoder_type
     args.pretrained_path = pretrained_path
 

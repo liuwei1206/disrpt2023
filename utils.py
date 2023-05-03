@@ -182,7 +182,7 @@ def seg_preds_to_file_new(all_input_ids, all_label_ids, all_attention_mask, all_
                     continue
                 items[-1] = pred_labels[pointer]
                 items[-2] = og_tokens[pointer]
-                print(items)
+                # print(items)
                 new_doc_data.append("\t".join(items))
                 pointer += 1
         else:
@@ -200,7 +200,7 @@ def seg_preds_to_file_new(all_input_ids, all_label_ids, all_attention_mask, all_
 def generate_ft_dict(train_file_path, dev_file_path, test_file_path, output_path, ft_model_path, ft_lang):
     all_files = [train_file_path, dev_file_path, test_file_path]
     #all_files = [dev_file_path, test_file_path]
-    #fasttext.util.download_model(ft_lang, if_exists='ignore') 
+    # fasttext.util.download_model(ft_lang, if_exists='ignore') 
     #ft = fasttext.load_model(ft_model_path)
     ft = fasttext.load_model(ft_model_path)
     all_texts = []
@@ -219,6 +219,7 @@ def generate_ft_dict(train_file_path, dev_file_path, test_file_path, output_path
     for i in range(len(token_list)):
         ft_dict[token_list[i]] = ft.get_word_vector(token_list[i])
     np.save(output_path, ft_dict)
+    print(" Finish filtering the unrelated embedding from {}.".format(ft_model_path))
     return ft_dict
 
 

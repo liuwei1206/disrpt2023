@@ -10,8 +10,8 @@ from torch.autograd import grad
 from torch import nn
 from torch.nn import CrossEntropyLoss
 # I modified the name of the pakege from TorchCRF to torchcrf, since my computer has only this version of crf...
-from torchcrf import CRF
-#from TorchCRF import CRF
+# from torchcrf import CRF
+from TorchCRF import CRF
 
 from transformers import PreTrainedModel
 from transformers.models.roberta import RobertaModel
@@ -235,7 +235,7 @@ class BaseSegClassifier(PreTrainedModel):
 
         if flag.lower() == "train":
             loss_fct = CrossEntropyLoss(ignore_index=-100)
-            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+            loss = loss_fct(logits.view(-1, self.num_labels), labels.long().view(-1))
             if self.do_adv:
                 perturbed_embedding_output = self.adv_attack(embedding_output, loss)
                 adv_loss = self.adversarial_forward(

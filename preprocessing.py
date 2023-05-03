@@ -630,36 +630,10 @@ def convert_all(data_folder_path):
             preprocessing(test_tok_file, test_conllu_file, test_rels_file, output_file_test)
 
 if __name__ == "__main__":
-    '''
-    tok_file = "./data/deu.rst.pcc/deu.rst.pcc_train.tok"
-    conll_file = "./data/deu.rst.pcc/deu.rst.pcc_train.conllu"
-    rel_file = "./data/deu.rst.pcc/deu.rst.pcc_train.rels"
-    output_file = "./data/deu.rst.pcc/deu.rst.pcc_train.json"
-    preprocessing(tok_file, conll_file, rel_file, output_file)
-   '''
-    '''
-    tok_file = "data/eng.pdtb.pdtb/eng.pdtb.pdtb_dev.tok"
-    conll_file = "data/eng.pdtb.pdtb/eng.pdtb.pdtb_dev.conllu"
-    rel_file = "data/eng.pdtb.pdtb/eng.pdtb.pdtb_dev.rels"
-    output_file = "data/eng.pdtb.pdtb/eng.pdtb.pdtb_dev.json"
-
-    preprocessing(tok_file, conll_file, rel_file, output_file)
-
-
-    '''
-
-<<<<<<< HEAD
-    # convert_all("data/dataset/")
+    convert_all("data/dataset/")
 
     """
     # turkish
-=======
-    dataset_path = "./data/dataset/"
-
-    convert_all(dataset_path)
-
-    '''
->>>>>>> 80fe873df61b8c2d28f30de0e02edb195ddd2fee
     tur_train_conll_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_train.conllu"
     tur_train_rel_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_train.rels"
     tur_train_output_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_train.json"
@@ -675,9 +649,10 @@ if __name__ == "__main__":
     tur_test_output_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_test.json"
     convert_tur(tur_test_conll_file, tur_test_rel_file, tur_test_output_file)
     """
-
+    
+    """
     # zho
-    dataset = "zho.pdtb.cdtb"
+    dataset = "deu.rst.pcc"
     for mode in ["train", "dev", "test"]:
         tok_file = "data/dataset/{}/{}_{}.tok".format(dataset, dataset, mode)
         conll_file = "data/dataset/{}/{}_{}.conllu".format(dataset, dataset, mode)
@@ -685,13 +660,15 @@ if __name__ == "__main__":
         out_file = "data/dataset/{}/{}_{}.json".format(dataset, dataset, mode)
         preprocessing(tok_file, conll_file, rel_file, out_file)
 
+    """
     # This part of code is for generating one dataset's fasttext embedding, everytime when you want to
     # generate the fasttext embedding from one dataset, please download it first!
 
     #missing fasttext dictionary for eng.pdtb.pdtb, eng.rst.rstdt, tur.pdtb.tdb, tur.pdtb.tedm, zho.pdtb.cdtb
 
     # choose one dataset that you want to generate fasttext dictionary
-    ft_target_dataset = "zho.rst.sctb"
+    dataset_path = "data/dataset/"
+    ft_target_dataset = "deu.rst.pcc"
     ft_train_path = dataset_path + ft_target_dataset + "/" + ft_target_dataset + "_train.json"
     ft_dev_path = dataset_path + ft_target_dataset + "/" + ft_target_dataset + "_dev.json"
     ft_test_path = dataset_path + ft_target_dataset + "/" + ft_target_dataset + "_test.json"
@@ -753,7 +730,8 @@ if __name__ == "__main__":
         fasttext_language = "th"
         fasttext_model = "cc.th.300.bin"
 
-    generate_ft_dict(ft_train_path, ft_dev_path, ft_test_path, ft_output_path, "data/dataset/" + fasttext_model, fasttext_language)
+    # generate_ft_dict(ft_train_path, ft_dev_path, ft_test_path, ft_output_path, "data/dataset/" + fasttext_model, fasttext_language)
+    generate_ft_dict(ft_train_path, ft_dev_path, ft_test_path, ft_output_path, "data/embeddings/" + fasttext_model, fasttext_language)
     #ft_dict = np.load(ft_output_path, allow_pickle=True).item()
     #print(ft_dict["посте"])
     """
