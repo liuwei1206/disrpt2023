@@ -10,6 +10,7 @@ python3 task12.py --do_train \
                   --learning_rate=1e-4 \
                   --dropout=0.1 \
                   --num_train_epochs=10 \
+                  --model_type=base \
 
 # COMMENT
 # eng.pdtb.pdtb

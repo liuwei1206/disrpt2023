@@ -23,7 +23,7 @@ from transformers.models.electra import ElectraConfig, ElectraTokenizer
 from transformers import XLMRobertaConfig, XLMRobertaTokenizer
 
 from utils import *
-from task_dataset import SegDataset
+from task_dataset import *
 from models import *
 from seg_eval import get_scores
 
@@ -45,12 +45,13 @@ PREFIX_CHECKPOINT_DIR = "checkpoint"
 import warnings
 warnings.filterwarnings('ignore')
 
+
 def get_argparse():
     parser = argparse.ArgumentParser()
 
     # path
     parser.add_argument("--data_dir", default="data/dataset", type=str)
-    parser.add_argument("--dataset", default="pdtb2", type=str, help="pdtb2, pdtb3")
+    parser.add_argument("--dataset", default="eng.rst.gum", type=str, help="pdtb2, pdtb3")
     parser.add_argument("--output_dir", default="data/result", type=str)
     parser.add_argument("--feature_size", default=0, type=int)
 
@@ -62,10 +63,11 @@ def get_argparse():
     parser.add_argument("--do_test", default=False, action="store_true")
     parser.add_argument("--do_freeze", default=False, action="store_true")
     parser.add_argument("--do_adv", default=False, action="store_true")
+    parser.add_argument("--run_plus", default=False, action="store_true")
 
     parser.add_argument("--train_batch_size", default=8, type=int)
     parser.add_argument("--eval_batch_size", default=24, type=int)
-    parser.add_argument("--max_seq_length", default=256, type=int)
+    parser.add_argument("--max_seq_length", default=512, type=int)
     parser.add_argument("--num_train_epochs", default=10, type=int, help="training epoch")
     parser.add_argument("--learning_rate", default=3e-5, type=float, help="learning rate")
     parser.add_argument("--dropout", default=0.1, type=float)
@@ -73,7 +75,10 @@ def get_argparse():
     parser.add_argument("--weight_decay", default=0.1, type=float)
     parser.add_argument("--warmup_ratio", default=0.06, type=float)
     parser.add_argument("--seed", default=106524, type=int, help="random seed")
+    parser.add_argument("--extra_feat_dim", default=400, type=int)
 
+    parser.add_argument("--pos1_convert", default="sequence", type=str, help="one-hot or sequence")
+    parser.add_argument("--pos2_convert", default="sequence", type=str, help="one-hot or sequence")
     return parser
 
 
@@ -177,15 +182,18 @@ def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_da
         # 3. evaluate and save
         model.eval()
         if False and train_dataloader is not None:
-            score_dict = evaluate(model, args, train_dataloader, tokenizer, epoch, desc="train")
+            #score_dict = evaluate(model, args, train_dataloader, tokenizer, epoch, desc="train")
+            score_dict = evaluate_new(model, args, train_dataloader, tokenizer, epoch, desc="train")
             print("\nTrain: Epoch=%d, F1=%.4f\n"%(epoch, score_dict["f_score"]))
         if dev_dataloader is not None:
-            score_dict = evaluate(model, args, dev_dataloader, tokenizer, epoch, desc="dev")
+            #score_dict = evaluate(model, args, dev_dataloader, tokenizer, epoch, desc="dev")
+            score_dict = evaluate_new(model, args, dev_dataloader, tokenizer, epoch, desc="dev")
             if score_dict["f_score"] > best_dev:
                 best_dev = score_dict["f_score"]
             print("\nDev: Epoch=%d, F1=%.4f\n"%(epoch, score_dict["f_score"]))
         if test_dataloader is not None:
-            score_dict = evaluate(model, args, test_dataloader, tokenizer, epoch, desc="test")
+            #score_dict = evaluate(model, args, test_dataloader, tokenizer, epoch, desc="test")
+            score_dict = evaluate_new(model, args, test_dataloader, tokenizer, epoch, desc="test")
             print("\nTest: Epoch=%d, F1=%.4f\n"%(epoch, score_dict["f_score"]))
         output_dir = os.path.join(args.output_dir, TIME_CHECKPOINT_DIR)
         output_dir = os.path.join(output_dir, f"{PREFIX_CHECKPOINT_DIR}_{epoch}")
@@ -193,12 +201,14 @@ def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_da
         # torch.save(model.state_dict(), os.path.join(output_dir, "pytorch_model.bin"))
     print("\nBest F1 on dev: %.4f"%(best_dev))
 
-def train_plus(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_dataloader=None, extra_feat_len=None):
+
+def train_plus(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_dataloader=None):
     # 1.prepare
     t_total = int(len(train_dataloader) * args.num_train_epochs)
     print_step = int(len(train_dataloader) // 4) + 1
     num_train_epochs = args.num_train_epochs
     optimizer, scheduler = get_optimizer(model, args, t_total)
+    extra_feat_dim = args.extra_feat_dim
 
     logger.info(" ***** Running training *****")
     logger.info("  Num examples = %d", len(train_dataloader.dataset))
@@ -223,7 +233,9 @@ def train_plus(model, args, tokenizer, train_dataloader, dev_dataloader=None, te
                 "attention_mask": batch[1],
                 "labels": batch[2],
                 "flag": "Train",
-                "extra_feat": batch[4]
+                "pos1_ids": batch[4],
+                "pos2_ids": batch[5],
+                "ft_embeds": batch[6]
             }
 
             outputs = model(**inputs)
@@ -240,27 +252,27 @@ def train_plus(model, args, tokenizer, train_dataloader, dev_dataloader=None, te
 
             if global_step % print_step == 0:
                 print(" global_step=%d, cur loss=%.4f, global avg loss=%.4f" % (
-                        global_step, logging_loss, tr_loss / global_step)
-                )
+                    global_step, logging_loss, tr_loss / global_step)
+                      )
 
         # 3. evaluate and save
         model.eval()
         if False and train_dataloader is not None:
-            score_dict = evaluate(model, args, train_dataloader, tokenizer, epoch, desc="train")
-            print("\nTrain: Epoch=%d, F1=%.4f\n"%(epoch, score_dict["f_score"]))
+            score_dict = evaluate_new(model, args, train_dataloader, tokenizer, epoch, desc="train")
+            print("\nTrain: Epoch=%d, F1=%.4f\n" % (epoch, score_dict["f_score"]))
         if dev_dataloader is not None:
-            score_dict = evaluate(model, args, dev_dataloader, tokenizer, epoch, desc="dev")
+            score_dict = evaluate_new(model, args, dev_dataloader, tokenizer, epoch, desc="dev")
             if score_dict["f_score"] > best_dev:
                 best_dev = score_dict["f_score"]
-            print("\nDev: Epoch=%d, F1=%.4f\n"%(epoch, score_dict["f_score"]))
+            print("\nDev: Epoch=%d, F1=%.4f\n" % (epoch, score_dict["f_score"]))
         if test_dataloader is not None:
-            score_dict = evaluate(model, args, test_dataloader, tokenizer, epoch, desc="test")
-            print("\nTest: Epoch=%d, F1=%.4f\n"%(epoch, score_dict["f_score"]))
+            score_dict = evaluate_new(model, args, test_dataloader, tokenizer, epoch, desc="test")
+            print("\nTest: Epoch=%d, F1=%.4f\n" % (epoch, score_dict["f_score"]))
         output_dir = os.path.join(args.output_dir, TIME_CHECKPOINT_DIR)
         output_dir = os.path.join(output_dir, f"{PREFIX_CHECKPOINT_DIR}_{epoch}")
         # os.makedirs(output_dir, exist_ok=True)
         # torch.save(model.state_dict(), os.path.join(output_dir, "pytorch_model.bin"))
-    print("\nBest F1 on dev: %.4f"%(best_dev))
+    print("\nBest F1 on dev: %.4f" % (best_dev))
 
 def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=False):
     all_input_ids = None
@@ -349,7 +361,7 @@ def evaluate_new(model, args, dataloader, tokenizer, epoch, desc="dev", write_fi
         gold_file = args.dev_data_file.replace(".json", ".tok")
     elif desc == "test":
         gold_file = args.test_data_file.replace(".json", ".tok")
-    print(all_pred_ids)
+    print(gold_file)
     pred_file = seg_preds_to_file_new(all_input_ids, all_label_ids, all_attention_mask, all_tok_idxs, args.tokenizer, args.label_list, gold_file)
     score_dict = get_scores(gold_file, pred_file)
 
@@ -376,39 +388,52 @@ def main():
         # pretrained_path = "xlm-roberta-large"
         encoder_type = "bert"
         pretrained_path = "bert-base-german-cased"
+
     elif lang_type.lower() == "eng":
         encoder_type = "bert" # "electra"
         pretrained_path = "bert-base-cased" # "google/electra-large-discriminator"
+
     elif lang_type.lower() == "eus":
         encoder_type = "bert"
         pretrained_path = "ixa-ehu/berteus-base-cased"
+
     elif lang_type.lower() == "fas":
         encoder_type = "bert"
         pretrained_path = "HooshvareLab/bert-fa-base-uncased"
+
     elif lang_type.lower() == "fra":
         encoder_type = "xlm-roberta"
         pretrained_path = "xlm-roberta-large"
+
     elif lang_type.lower() == "ita":
         encoder_type = "bert"
         pretrained_path = "dbmdz/bert-base-italian-cased"
+
     elif lang_type.lower() == "nld":
         encoder_type = "roberta"
         pretrained_path = "pdelobelle/robbert-v2-dutch-base"
+
     elif lang_type.lower() == "por":
         encoder_type = "bert"
         pretrained_path = "neuralmind/bert-base-portuguese-cased"
+
     elif lang_type.lower() == "rus":
         encoder_type = "bert"
         pretrained_path = "DeepPavlov/rubert-base-cased"
+
     elif lang_type.lower() == "spa":
         encoder_type = "bert"
         pretrained_path = "dccuchile/bert-base-spanish-wwm-cased"
+
     elif lang_type.lower() == "tur":
         encoder_type = "bert"
         pretrained_path = "dbmdz/bert-base-turkish-cased"
+
     elif lang_type.lower() == "zho":
         encoder_type = "bert"
         pretrained_path = "bert-base-chinese"
+
+
     args.encoder_type = encoder_type
     args.pretrained_path = pretrained_path
 
@@ -428,7 +453,15 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
     args.output_dir = output_dir
 
+    ft_model_path = "./ft_dicts/" + args.dataset + "_ftdict.npy"
+    #ft_model_path = os.path.join(data_dir, ft_file_path)
+    if os.path.exists(ft_model_path):
+        ft_dict = np.load(ft_model_path, allow_pickle=True).item()
+    else:
+        print("fasttext embedding file is not in the right dirctory or not exist at all!!!! Please fix it!!!!")
+
     # 2.define models
+
     if args.model_type.lower() == "base":
         if args.encoder_type.lower() == "roberta":
             config = RobertaConfig.from_pretrained(pretrained_path)
@@ -442,7 +475,7 @@ def main():
         elif args.encoder_type.lower() == "xlm-roberta":
             config = XLMRobertaConfig.from_pretrained(pretrained_path)
             tokenizer = XLMRobertaTokenizer.from_pretrained(pretrained_path)
-        model = BaseSegClassifier(config=config, args=args)
+
         dataset_name = "SegDataset"
     elif args.model_type.lower() == "bilstm+crf":
         if args.encoder_type.lower() == "roberta":
@@ -457,13 +490,12 @@ def main():
         elif args.encoder_type.lower() == "xlm-roberta":
             config = XLMRobertaConfig.from_pretrained(pretrained_path)
             tokenizer = XLMRobertaTokenizer.from_pretrained(pretrained_path)
-        model = BiLSTMCRF(config=config, args=args)
-        dataset_name = "SegDataset"
+
+        #dataset_name = "SegDataset"
+        dataset_name = "SegDatasetPlus"
         # you can test my new dataset by using folowing code
         # dataset_name = "SegDataset2"
         # now you can aplly SegDatasetPlus
-    model = model.to(args.device)
-    args.tokenizer = tokenizer
 
     if args.run_plus:
         dataset_params = {
@@ -476,27 +508,78 @@ def main():
             "pos2_dict": tok_pos_2_dict,
             "pos2_list": tok_pos_2,
             "pos2_convert": args.pos2_convert,
+            "ft_dict": ft_dict,
         }
-        dataset_module = __import__("task_dataset")
-        MyDataset = getattr(dataset_module, dataset_name)
-        extra_feat_len = MyDataset.get_extra_feat_len()
-        args.extra_feat_dim = extra_feat_len
+
+        #dataset_module = __import__("task_dataset")
+        #MyDataset = getattr(dataset_module, dataset_name)
+        MyDataset = SegDatasetPlus
     else:
         dataset_params = {
             "tokenizer": tokenizer,
             "max_seq_length": args.max_seq_length,
             "label_dict": label_dict,
         }
-        dataset_module = __import__("task_dataset")
-        MyDataset = getattr(dataset_module, dataset_name)
+        #dataset_module = __import__("task_dataset")
+        #MyDataset = getattr(dataset_module, dataset_name)
+        #MyDataset = SegDataset
+        MyDataset = SegDataset2
+    if args.model_type.lower() == "base":
+        model = BaseSegClassifier(config=config, args=args)
+    elif args.model_type.lower() == "bilstm+crf":
+        args.pos1_vocab_len = len(tok_pos_1_dict)
+        args.pos2_vocab_len = len(tok_pos_2_dict)
+        # for the sequence mode, to control the length of the embedding
+        args.pos1_dim = 50
+        args.pos2_dim = 50
+        model = BiLSTMCRFPlus(config=config, args=args)
+    model = model.to(args.device)
+    args.tokenizer = tokenizer
+
 
     if args.do_train:
         train_dataset = MyDataset(train_data_file, params=dataset_params)
-        dev_dataset = MyDataset(dev_data_file, params=dataset_params)
+
+        tok_pos_1_dev, tok_pos_2_dev, tok_pos_1_dict_dev, tok_pos_2_dict_dev = token_pos_from_file(dev_data_file)
+        if args.run_plus:
+            dev_dataset_params = {
+                "tokenizer": tokenizer,
+                "max_seq_length": args.max_seq_length,
+                "label_dict": label_dict,
+                "pos1_dict": tok_pos_1_dict_dev,
+                "pos1_list": tok_pos_1_dev,
+                "pos1_convert": args.pos1_convert,
+                "pos2_dict": tok_pos_2_dict_dev,
+                "pos2_list": tok_pos_2_dev,
+                "pos2_convert": args.pos2_convert,
+                "ft_dict": ft_dict,
+            }
+            dev_dataset = MyDataset(dev_data_file, params=dev_dataset_params)
+            extra_feat_len = train_dataset.get_extra_feat_len()
+            args.extra_feat_dim = extra_feat_len
+        else:
+            dev_dataset = MyDataset(dev_data_file, params=dataset_params)
         print(test_data_file)
         if os.path.exists(test_data_file):
             print("++in++")
-            test_dataset = MyDataset(test_data_file, params=dataset_params)
+            if args.run_plus:
+                tok_pos_1_test, tok_pos_2_test, tok_pos_1_dict_test, tok_pos_2_dict_test = token_pos_from_file(test_data_file)
+                test_dataset_params = {
+                    "tokenizer": tokenizer,
+                    "max_seq_length": args.max_seq_length,
+                    "label_dict": label_dict,
+                    "pos1_dict": tok_pos_1_dict_test,
+                    "pos1_list": tok_pos_1_test,
+                    "pos1_convert": args.pos1_convert,
+                    "pos2_dict": tok_pos_2_dict_test,
+                    "pos2_list": tok_pos_2_test,
+                    "pos2_convert": args.pos2_convert,
+                    "ft_dict": ft_dict,
+                }
+                test_dataset = MyDataset(test_data_file, params=test_dataset_params)
+            else:
+                test_dataset = MyDataset(test_data_file, params=dataset_params)
+
         else:
             test_dataset = None
         train_dataloader = get_dataloader(train_dataset, args, mode="train")
@@ -506,7 +589,7 @@ def main():
         else:
             test_dataloader = None
         if args.run_plus:
-            train_plus(model, args, tokenizer, train_dataloader, dev_dataloader, test_dataloader, extra_feat_len)
+            train_plus(model, args, tokenizer, train_dataloader, dev_dataloader, test_dataloader)
         else:
             train(model, args, tokenizer, train_dataloader, dev_dataloader, test_dataloader)
 
@@ -515,10 +598,10 @@ def main():
         time_dir = "good"
         temp_dir = os.path.join(args.output_dir, time_dir)
         temp_file = os.path.join(temp_dir, "checkpoint_{}/pytorch_model.bin")
-        if do_dev:
+        if args.do_dev:
             dev_dataset = MyDataset(dev_data_file, params=dataset_params)
             dev_dataloader = get_dataloader(dev_dataset, args, mode="dev")
-        if do_test:
+        if args.do_test:
             test_dataset = MyDataset(test_data_file, params=dataset_params)
             test_dataloader = get_dataloader(test_dataset, args, mode="test")
 
@@ -531,10 +614,12 @@ def main():
             model.eval()
 
             if args.do_dev:
-                evaluate(model, args, dev_dataloader, tokenizer, epoch, desc="dev", write_file=True)
+                #evaluate(model, args, dev_dataloader, tokenizer, epoch, desc="dev", write_file=True)
+                evaluate_new(model, args, dev_dataloader, tokenizer, epoch, desc="dev", write_file=False)
                 # print(" Dev: acc=%.4f, p=%.4f, r=%.4f, f1=%.4f\n" % (acc, p, r, f1))
             if args.do_test:
-                evaluate(model, args, test_dataloader, tokenizer, epoch, desc="test", write_file=True)
+                #evaluate(model, args, test_dataloader, tokenizer, epoch, desc="test", write_file=True)
+                evaluate_new(model, args, test_dataloader, tokenizer, epoch, desc="test", write_file=False)
                 # print(" Test: acc=%.4f, p=%.4f, r=%.4f, f1=%.4f\n" % (acc, p, r, f1))
             print()
 

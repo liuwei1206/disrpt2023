@@ -5,6 +5,8 @@ from collections import defaultdict
 import torch
 import torch.nn.functional as F
 import numpy as np
+import fasttext
+import fasttext.util
 
 def token_labels_from_file(file_name):
     labels = set()
@@ -46,7 +48,8 @@ def token_pos_from_file(file_name):
     tok_pos_2 = sorted(tok_pos_2)
     tok_pos_1_dict = {t: idx + 1 for idx, t in enumerate(tok_pos_1)}
     tok_pos_2_dict = {t: idx + 1 for idx, t in enumerate(tok_pos_2)}
-
+    tok_pos_1_dict["SEPCIAL_TOKEN"] = 0
+    tok_pos_2_dict["SEPCIAL_TOKEN"] = 0
     return tok_pos_1, tok_pos_2, tok_pos_1_dict, tok_pos_2_dict
 
 def rel_labels_from_file(file_name):
@@ -158,20 +161,15 @@ def seg_preds_to_file_new(all_input_ids, all_label_ids, all_attention_mask, all_
     pred_labels = []
 
     for i in range(len(all_attention_mask)):
-        tmp_idx = [idx for idx in all_tok_idxs[i] if idx > 0]
-        point_loc = np.argwhere(all_input_ids[i] == 102)
-        if len(point_loc):
-            tmp_idx.append(point_loc[0][0])
-        og_toks_ids = all_input_ids[i][tmp_idx]
-        tmp_toks = tokenizer.convert_ids_to_tokens(og_toks_ids)
 
+        tmp_idx = [idx for idx in all_tok_idxs[i] if idx > 0]
+
+        og_toks_ids = all_input_ids[i][tmp_idx]
+        og_labels = all_label_ids[i][tmp_idx]
+        tmp_toks = tokenizer.convert_ids_to_tokens(og_toks_ids)
         for j in range(len(tmp_toks)):
-            if tmp_toks[j] == "[SEP]":
-                og_tokens.append(".")
-                pred_labels.append("_")
-            else:
-                og_tokens.append(tmp_toks[j])
-                pred_labels.append(label_id_dict[int(all_label_ids[i][j])])
+            og_tokens.append(tmp_toks[j])
+            pred_labels.append(label_id_dict[int(og_labels[j])])
 
     pointer = 0
     for line in all_doc_data:
@@ -191,13 +189,37 @@ def seg_preds_to_file_new(all_input_ids, all_label_ids, all_attention_mask, all_
             new_doc_data.append('\n')
 
     pred_file = gold_tok_file.replace(".tok", "_pred.tok")
-    with open(pred_file,"w") as f:
+    with open(pred_file, "w") as f:
         for line in new_doc_data:
             if line[-1:] != "\n":
                 f.write(line + "\n")
             else:
                 f.write(line)
+    return pred_file
 
+def generate_ft_dict(train_file_path, dev_file_path, test_file_path, output_path, ft_model_path, ft_lang):
+    all_files = [train_file_path, dev_file_path, test_file_path]
+    #all_files = [dev_file_path, test_file_path]
+    #fasttext.util.download_model(ft_lang, if_exists='ignore') 
+    #ft = fasttext.load_model(ft_model_path)
+    ft = fasttext.load_model(ft_model_path)
+    all_texts = []
+    token_list = []
+    ft_dict = {}
+    for path in all_files:
+        with open(path, 'r') as f:
+            for line in f.readlines():
+                line_content = json.loads(line)
+                all_texts.append(line_content)
+        for doc in all_texts:
+            doc_token_list = doc["doc_sents"]
+            for i in range(len(doc_token_list)):
+                for j in range(len(doc_token_list[i])):
+                    token_list.append(doc_token_list[i][j])  
+    for i in range(len(token_list)):
+        ft_dict[token_list[i]] = ft.get_word_vector(token_list[i])
+    np.save(output_path, ft_dict)
+    return ft_dict
 
 
 def rel_preds_to_file(pred_ids, label_list, gold_file):

@@ -8,6 +8,7 @@ from torch.utils.data import Dataset
 from collections import defaultdict
 from utils import encode_words, get_similarity_features
 
+
 class SegDataset(Dataset):
     '''Generate the dataset for task1 Segmentation'''
 
@@ -25,66 +26,56 @@ class SegDataset(Dataset):
             file_name: data path
         """
         default_label = "_"
-        print(data_path)
-        token_list = []
+
+        sent_list = []
         label_list = []
         all_texts = []
         with open(data_path, 'r') as f:
             for line in f.readlines():
                 line_content = json.loads(line)
                 all_texts.append(line_content)
-
         for doc in all_texts:
             doc_token_list = doc["doc_sents"]
             doc_label_list = doc["doc_sent_token_labels"]
             for i in range(len(doc_token_list)):
-                for j in range(len(doc_token_list[i])):
-                    token_list.append(doc_token_list[i][j])
-                    label_list.append(doc_label_list[i][j])
+                sent_list.append(doc_token_list[i])
+                label_list.append(doc_label_list[i])
 
         self.sents, self.labels, self.ids = [], [], []
         tmp_words, tmp_labels, tmp_sent_token_ids, tmp_label_ids, tmp_label_ids_list, tmp_masks = [], [], [], [], [], []
 
-        for token, tag in zip(token_list, label_list):
-            if token != '.':
-                tmp_words.append(token)
-                tmp_labels.append(tag)
-                # print("in-")
+        for tokens, tags in zip(sent_list, label_list):
+
+            if len(tokens) > self.max_seq_length - 2:
+                temp_sent = [self.tokenizer.cls_token] + tokens[:self.max_seq_length - 2] + [self.tokenizer.sep_token]
+                temp_label = [default_label] + tags[:self.max_seq_length - 2] + [default_label]
+                self.sents.append(temp_sent)
+                self.labels.append(temp_label)
             else:
-                if len(tmp_words) > self.max_seq_length - 2:
-                    print(tmp_words)
-                    temp_sent = [self.tokenizer.cls_token] + tmp_words[:self.max_seq_length-2] + [
-                        self.tokenizer.sep_token]
-                    temp_label = [default_label] + tmp_labels[:self.max_seq_length-2] + [default_label]
-                    self.sents.append(temp_sent)
-                    self.labels.append(temp_label)
-                else:
-                    temp_sent = [self.tokenizer.cls_token] + tmp_words + [self.tokenizer.sep_token]
-                    temp_label = [default_label] + tmp_labels + [default_label]
-                    self.sents.append(temp_sent)
-                    self.labels.append(temp_label)
+                temp_sent = [self.tokenizer.cls_token] + tokens + [self.tokenizer.sep_token]
+                temp_label = [default_label] + tags + [default_label]
+                self.sents.append(temp_sent)
+                self.labels.append(temp_label)
 
-                # convert to ids
-                tmp_tok_ids = self.tokenizer.convert_tokens_to_ids(temp_sent)
-                tmp_label_ids = [self.label_dict[l] for l in temp_label]
-                assert len(tmp_tok_ids) == len(tmp_label_ids), (len(tmp_tok_ids), len(tmp_label_ids))
+            # convert to ids
+            tmp_tok_ids = self.tokenizer.convert_tokens_to_ids(temp_sent)
+            tmp_label_ids = [self.label_dict[l] for l in temp_label]
+            assert len(tmp_tok_ids) == len(tmp_label_ids), (len(tmp_tok_ids), len(tmp_label_ids))
 
-                # unify the sequence length
-                input_ids = np.ones(self.max_seq_length, dtype=np.int32)
-                attention_mask = np.zeros(self.max_seq_length, dtype=np.int32)
-                label_ids = np.ones(self.max_seq_length, dtype=np.int32)
-                input_ids = input_ids * self.tokenizer.pad_token_id
-                input_ids[:len(tmp_tok_ids)] = tmp_tok_ids
-                attention_mask[:len(tmp_tok_ids)] = 1
-                label_ids[:len(tmp_label_ids)] = tmp_label_ids
+            # unify the sequence length
+            input_ids = np.ones(self.max_seq_length, dtype=np.int32)
+            attention_mask = np.zeros(self.max_seq_length, dtype=np.int32)
+            label_ids = np.ones(self.max_seq_length, dtype=np.int32)
+            input_ids = input_ids * self.tokenizer.pad_token_id
+            input_ids[:len(tmp_tok_ids)] = tmp_tok_ids
+            attention_mask[:len(tmp_tok_ids)] = 1
+            label_ids[:len(tmp_label_ids)] = tmp_label_ids
 
-                # put together
-                tmp_sent_token_ids.append(input_ids)
-                tmp_label_ids_list.append(label_ids)
-                tmp_masks.append(attention_mask)
+            # put together
+            tmp_sent_token_ids.append(input_ids)
+            tmp_label_ids_list.append(label_ids)
+            tmp_masks.append(attention_mask)
 
-                tmp_words, tmp_labels = [], []
-        print("sample size: ", len(tmp_sent_token_ids))
         self.input_ids = np.array(tmp_sent_token_ids)
         self.attention_mask = np.array(tmp_masks)
         self.label_ids = np.array(tmp_label_ids_list)
@@ -95,11 +86,7 @@ class SegDataset(Dataset):
 
     def __getitem__(self, index):
         mask = (self.attention_mask[index] > 0)
-        return (
-            torch.tensor(self.input_ids[index]).long(), 
-            torch.tensor(mask).long(), 
-            torch.tensor(self.label_ids[index]).long()
-        )
+        return self.input_ids[index], mask, self.label_ids[index]
 
 
 class SegDataset2(Dataset):
@@ -121,7 +108,7 @@ class SegDataset2(Dataset):
         """
         default_label = "_"
 
-        token_list = []
+        sent_list = []
         label_list = []
         all_texts = []
         with open(data_path, 'r') as f:
@@ -132,65 +119,63 @@ class SegDataset2(Dataset):
             doc_token_list = doc["doc_sents"]
             doc_label_list = doc["doc_sent_token_labels"]
             for i in range(len(doc_token_list)):
-                for j in range(len(doc_token_list[i])):
-                    token_list.append(doc_token_list[i][j])
-                    label_list.append(doc_label_list[i][j])
+                sent_list.append(doc_token_list[i])
+                label_list.append(doc_label_list[i])
 
         self.sents, self.labels, self.ids, self.tok_start_idxs = [], [], [], []
         tmp_words, tmp_labels, tmp_sent_token_ids, tmp_label_ids, tmp_label_ids_list, tmp_masks, subword_lengths = [], [], [], [], [], [], []
 
-        for token, tag in zip(token_list, label_list):
-            if token != '.' and token != '。' and len(tmp_words) < self.max_seq_length - 2:
-                tmp_subtoks = self.tokenizer.tokenize(token)
+        for tokens, tags in zip(sent_list, label_list):
+            for t in range(len(tokens)):
+                tmp_subtoks = self.tokenizer.tokenize(tokens[t])
                 subword_lengths.append(len(tmp_subtoks))
-
                 tmp_words += tmp_subtoks
-                if tag == "Seg=B-Conn":
-                    tmp_labels.append(tag)
+                if tags[t] == "Seg=B-Conn":
+                    tmp_labels.append(tags[t])
                     if "Seg=I-Conn" in self.label_dict:
                         tmp_labels += ["Seg=I-Conn"] * (len(tmp_subtoks) - 1)
                     else:
                         tmp_labels += ["Seg=B-Conn"] * (len(tmp_subtoks) - 1)
                 else:
-                    tmp_labels += [tag] * len(tmp_subtoks)
+                    tmp_labels += [tags[t]] * len(tmp_subtoks)
+
+            if len(tmp_words) > self.max_seq_length - 2:
+                temp_sent = [self.tokenizer.cls_token] + tmp_words[:self.max_seq_length - 2] + [
+                    self.tokenizer.sep_token]
+                temp_sent_label = [default_label] + tmp_labels[:self.max_seq_length - 2] + [default_label]
+                self.sents.append(temp_sent)
+                self.labels.append(temp_sent_label)
             else:
-                if len(tmp_words) > self.max_seq_length - 2:
-                    temp_sent = [self.tokenizer.cls_token] + tmp_words[:self.max_seq_length - 2] + [
-                        self.tokenizer.sep_token]
-                    temp_sent_label = [default_label] + tmp_labels[:self.max_seq_length - 2] + [default_label]
-                    self.sents.append(temp_sent)
-                    self.labels.append(temp_sent_label)
-                else:
-                    temp_sent = [self.tokenizer.cls_token] + tmp_words + [self.tokenizer.sep_token]
-                    temp_sent_label = [default_label] + tmp_labels + [default_label]
-                    self.sents.append(temp_sent)
-                    self.labels.append(temp_sent_label)
+                temp_sent = [self.tokenizer.cls_token] + tmp_words + [self.tokenizer.sep_token]
+                temp_sent_label = [default_label] + tmp_labels + [default_label]
+                self.sents.append(temp_sent)
+                self.labels.append(temp_sent_label)
 
-                # convert to ids
-                tmp_tok_ids = self.tokenizer.convert_tokens_to_ids(temp_sent)
-                tmp_label_ids = [self.label_dict[l] for l in temp_sent_label]
-                assert len(tmp_tok_ids) == len(tmp_label_ids), (len(tmp_tok_ids), len(tmp_label_ids))
+            # convert to ids
+            tmp_tok_ids = self.tokenizer.convert_tokens_to_ids(temp_sent)
+            tmp_label_ids = [self.label_dict[l] for l in temp_sent_label]
+            assert len(tmp_tok_ids) == len(tmp_label_ids), (len(tmp_tok_ids), len(tmp_label_ids))
 
-                # store the location of the first part after word piece
-                token_start_idxs = 1 + np.cumsum([0] + subword_lengths[:-1])
+            # store the location of the first part after word piece
+            token_start_idxs = 1 + np.cumsum([0] + subword_lengths[:-1])
 
-                # unify the sequence length
-                input_ids = np.ones(self.max_seq_length, dtype=np.int32)
-                attention_mask = np.zeros(self.max_seq_length, dtype=np.int32)
-                label_ids = np.ones(self.max_seq_length, dtype=np.int32)
-                og_tok_ids = np.zeros(self.max_seq_length, dtype=np.int32)
+            # unify the sequence length
+            input_ids = np.ones(self.max_seq_length, dtype=np.int32)
+            attention_mask = np.zeros(self.max_seq_length, dtype=np.int32)
+            label_ids = np.ones(self.max_seq_length, dtype=np.int32)
+            og_tok_ids = np.zeros(self.max_seq_length, dtype=np.int32)
 
-                input_ids = input_ids * self.tokenizer.pad_token_id
-                input_ids[:len(tmp_tok_ids)] = tmp_tok_ids
-                attention_mask[:len(tmp_tok_ids)] = 1
-                label_ids[:len(tmp_label_ids)] = tmp_label_ids
-                og_tok_ids[:len(token_start_idxs)] = token_start_idxs
-                # put together
-                tmp_sent_token_ids.append(input_ids)
-                tmp_label_ids_list.append(label_ids)
-                tmp_masks.append(attention_mask)
-                self.tok_start_idxs.append(og_tok_ids)
-                tmp_words, tmp_labels, subword_lengths = [], [], []
+            input_ids = input_ids * self.tokenizer.pad_token_id
+            input_ids[:len(tmp_tok_ids)] = tmp_tok_ids
+            attention_mask[:len(tmp_tok_ids)] = 1
+            label_ids[:len(tmp_label_ids)] = tmp_label_ids
+            og_tok_ids[:len(token_start_idxs)] = token_start_idxs
+            # put together
+            tmp_sent_token_ids.append(input_ids)
+            tmp_label_ids_list.append(label_ids)
+            tmp_masks.append(attention_mask)
+            self.tok_start_idxs.append(og_tok_ids)
+            tmp_words, tmp_labels, subword_lengths = [], [], []
 
         self.input_ids = np.array(tmp_sent_token_ids)
         self.attention_mask = np.array(tmp_masks)
@@ -210,6 +195,12 @@ class SegDatasetPlus(Dataset):
     '''Generate the dataset for task1 Segmentation'''
 
     def __init__(self, file_name, params):
+        # donwload manually would be faster
+        # fasttext.util.download_model(params["fasttext_language"], if_exists='ignore')  # English
+        # self.ft = fasttext.load_model(params["fasttext_model"])
+        # self.ft_dict = np.load('/content/drive/MyDrive/shared_task/eng.rst.gum.npy', allow_pickle=True).item()
+        # self.ft_dict = np.load(params["ft_dict"], allow_pickle=True).item()
+        self.ft_dict = params["ft_dict"]
         self.max_seq_length = params["max_seq_length"]
         self.tokenizer = params["tokenizer"]
         self.label_dict = params["label_dict"]
@@ -231,6 +222,7 @@ class SegDatasetPlus(Dataset):
             file_name: data path
         """
         default_label = "_"
+        default_ft_embeds = np.zeros((1, 300))
 
         token_list = []
         label_list = []
@@ -248,98 +240,115 @@ class SegDatasetPlus(Dataset):
             doc_pos_list = doc['doc_sent_token_features']
 
             for i in range(len(doc_token_list)):
+                tmp_read_toks = []
+                tmp_read_tags = []
+                tmp_read_pos1 = []
+                tmp_read_pos2 = []
                 for j in range(len(doc_token_list[i])):
-                    token_list.append(doc_token_list[i][j])
-                    label_list.append(doc_label_list[i][j])
-                    pos1_list.append(doc_pos_list[i][j][1])
-                    pos2_list.append(doc_pos_list[i][j][2])
+                    tmp_read_toks.append(doc_token_list[i][j])
+                    tmp_read_tags.append(doc_label_list[i][j])
+                    tmp_read_pos1.append(doc_pos_list[i][j][1])
+                    tmp_read_pos2.append(doc_pos_list[i][j][2])
+                token_list.append(tmp_read_toks)
+                label_list.append(tmp_read_tags)
+                pos1_list.append(tmp_read_pos1)
+                pos2_list.append(tmp_read_pos2)
 
-        self.sents, self.labels, self.ids, self.tok_start_idxs, self.tok_pos_list1, self.tok_pos_list2 = [], [], [], [], [], []
-        tmp_words, tmp_labels, tmp_sent_token_ids, tmp_label_ids, tmp_label_ids_list, tmp_masks, subword_lengths, tmp_tok_pos1, tmp_tok_pos2 = [], [], [], [], [], [], [], [], []
+        self.sents, self.labels, self.ids, self.tok_start_idxs, self.tok_pos_list1, self.tok_pos_list2, self.fasttext_embeds = [], [], [], [], [], [], []
+        tmp_words, tmp_labels, tmp_sent_token_ids, tmp_label_ids, tmp_label_ids_list, tmp_masks, subword_lengths, tmp_tok_pos1, tmp_tok_pos2, tmp_fast_embeds, tmp_fast_embeds_list = [], [], [], [], [], [], [], [], [], [], []
 
         for i in range(len(token_list)):
-            token = token_list[i]
-            tag = label_list[i]
-            tok_pos1 = pos1_list[i]
-            tok_pos2 = pos2_list[i]
-            if token != '.' and token != '。' and len(tmp_words) < self.max_seq_length - 2:
-                tmp_subtoks = self.tokenizer.tokenize(token)
+            tokens = token_list[i]
+            tags = label_list[i]
+            # print(pos1_list)
+            tok_pos1_list = pos1_list[i]
+            tok_pos2_list = pos2_list[i]
+            for t in range(len(tokens)):
+                tmp_fast_embeds = self.ft_dict[tokens[t]]
+
+                tmp_subtoks = self.tokenizer.tokenize(tokens[t])
                 subword_lengths.append(len(tmp_subtoks))
                 tmp_words += tmp_subtoks
+                tmp_fast_embeds_list += [tmp_fast_embeds] * len(tmp_subtoks)
+
+                tok_pos1 = self.pos1_dict[tok_pos1_list[t]]
+                tok_pos2 = self.pos2_dict[tok_pos2_list[t]]
+
                 tmp_tok_pos1 += [tok_pos1] * len(tmp_subtoks)
                 tmp_tok_pos2 += [tok_pos2] * len(tmp_subtoks)
-                if tag == "Seg=B-Conn":
-                    tmp_labels.append(tag)
+
+                if tags[t] == "Seg=B-Conn":
+                    tmp_labels.append(tags[t])
                     if "Seg=I-Conn" in self.label_dict:
                         tmp_labels += ["Seg=I-Conn"] * (len(tmp_subtoks) - 1)
                     else:
                         tmp_labels += ["Seg=B-Conn"] * (len(tmp_subtoks) - 1)
                 else:
-                    tmp_labels += [tag] * len(tmp_subtoks)
+                    tmp_labels += [tags[t]] * len(tmp_subtoks)
 
+            if len(tmp_words) > self.max_seq_length - 2:
+                temp_sent = [self.tokenizer.cls_token] + tmp_words[:self.max_seq_length - 2] + [
+                    self.tokenizer.sep_token]
+                temp_sent_label = [default_label] + tmp_labels[:self.max_seq_length - 2] + [default_label]
+                tmp_tok_pos1 = [0] + tmp_tok_pos1[:self.max_seq_length - 2] + [0]
+                tmp_tok_pos2 = [0] + tmp_tok_pos2[:self.max_seq_length - 2] + [0]
+                tmp_fast_embeds_list = [default_ft_embeds] + tmp_fast_embeds_list[:self.max_seq_length - 2] + [
+                    default_ft_embeds]
+
+                self.sents.append(temp_sent)
+                self.labels.append(temp_sent_label)
             else:
-                if len(tmp_words) > self.max_seq_length - 2:
-                    temp_sent = [self.tokenizer.cls_token] + tmp_words[:self.max_seq_length - 2] + [
-                        self.tokenizer.sep_token]
-                    temp_sent_label = [default_label] + tmp_labels[:self.max_seq_length - 2] + [default_label]
-                    self.sents.append(temp_sent)
-                    self.labels.append(temp_sent_label)
-                else:
-                    temp_sent = [self.tokenizer.cls_token] + tmp_words + [self.tokenizer.sep_token]
-                    temp_sent_label = [default_label] + tmp_labels + [default_label]
-                    self.sents.append(temp_sent)
-                    self.labels.append(temp_sent_label)
-                # convert to ids
-                if self.pos1_convert == "one-hot":
-                    tmp_onehot = [0] * len(self.pos1_lst)
-                    for i in range(len(self.pos1_lst)):
-                        if self.pos1_lst[i] in tmp_tok_pos1:
-                            tmp_onehot[i] = 1
-                    self.tok_pos_list1.append(tmp_onehot)
-                elif self.pos1_convert == "sequence":
-                    tmp_tok_pos1 = [self.pos1_dict[id] for id in tmp_tok_pos1]
-                    # fix the length
-                    tmp_p1 = np.zeros(self.max_seq_length - 2, dtype=np.int32)
-                    tmp_p1[:len(tmp_tok_pos1)] = tmp_tok_pos1
-                    self.tok_pos_list1.append(tmp_p1)
+                temp_sent = [self.tokenizer.cls_token] + tmp_words + [self.tokenizer.sep_token]
+                temp_sent_label = [default_label] + tmp_labels + [default_label]
+                tmp_tok_pos1 = [0] + tmp_tok_pos1 + [0]
+                tmp_tok_pos2 = [0] + tmp_tok_pos2 + [0]
+                tmp_fast_embeds_list = [default_ft_embeds] + tmp_fast_embeds_list + [default_ft_embeds]
 
-                if self.pos2_convert == "one-hot":
-                    tmp_onehot = [0] * len(self.pos2_lst)
-                    for i in range(len(self.pos2_lst)):
-                        if self.pos2_lst[i] in tmp_tok_pos2:
-                            tmp_onehot[i] = 1
-                    self.tok_pos_list2.append(tmp_onehot)
-                elif self.pos2_convert == "sequence":
-                    tmp_tok_pos2 = [self.pos2_dict[id] for id in tmp_tok_pos2]
-                    # fix the length
-                    tmp_p2 = np.zeros(self.max_seq_length - 2, dtype=np.int32)
-                    tmp_p2[:len(tmp_tok_pos2)] = tmp_tok_pos2
-                    self.tok_pos_list2.append(tmp_p2)
+                self.sents.append(temp_sent)
+                self.labels.append(temp_sent_label)
+            # convert to ids
+            tmp_tok_ids = self.tokenizer.convert_tokens_to_ids(temp_sent)
+            tmp_label_ids = [self.label_dict[l] for l in temp_sent_label]
+            assert len(tmp_tok_ids) == len(tmp_label_ids), (len(tmp_tok_ids), len(tmp_label_ids))
 
-                tmp_tok_ids = self.tokenizer.convert_tokens_to_ids(temp_sent)
-                tmp_label_ids = [self.label_dict[l] for l in temp_sent_label]
-                assert len(tmp_tok_ids) == len(tmp_label_ids), (len(tmp_tok_ids), len(tmp_label_ids))
+            # store the location of the first part after word piece
+            token_start_idxs = 1 + np.cumsum([0] + subword_lengths[:-1])
 
-                # store the location of the first part after word piece
-                token_start_idxs = 1 + np.cumsum([0] + subword_lengths[:-1])
+            # unify the sequence length
+            input_ids = np.ones(self.max_seq_length, dtype=np.int32)
+            attention_mask = np.zeros(self.max_seq_length, dtype=np.int32)
+            label_ids = np.ones(self.max_seq_length, dtype=np.int32)
+            og_tok_ids = np.zeros(self.max_seq_length, dtype=np.int32)
+            pos1_ids = np.zeros(self.max_seq_length, dtype=np.int32)
+            pos2_ids = np.zeros(self.max_seq_length, dtype=np.int32)
 
-                # unify the sequence length
-                input_ids = np.ones(self.max_seq_length, dtype=np.int32)
-                attention_mask = np.zeros(self.max_seq_length, dtype=np.int32)
-                label_ids = np.ones(self.max_seq_length, dtype=np.int32)
-                og_tok_ids = np.zeros(self.max_seq_length, dtype=np.int32)
+            tmp_ft_list = [np.zeros((1, 300))] * self.max_seq_length
 
-                input_ids = input_ids * self.tokenizer.pad_token_id
-                input_ids[:len(tmp_tok_ids)] = tmp_tok_ids
-                attention_mask[:len(tmp_tok_ids)] = 1
-                label_ids[:len(tmp_label_ids)] = tmp_label_ids
-                og_tok_ids[:len(token_start_idxs)] = token_start_idxs
-                # put together
-                tmp_sent_token_ids.append(input_ids)
-                tmp_label_ids_list.append(label_ids)
-                tmp_masks.append(attention_mask)
-                self.tok_start_idxs.append(og_tok_ids)
-                tmp_words, tmp_labels, subword_lengths, tmp_tok_pos1, tmp_tok_pos2 = [], [], [], [], []
+            input_ids = input_ids * self.tokenizer.pad_token_id
+            input_ids[:len(tmp_tok_ids)] = tmp_tok_ids
+            attention_mask[:len(tmp_tok_ids)] = 1
+            label_ids[:len(tmp_label_ids)] = tmp_label_ids
+
+            og_tok_ids[:len(token_start_idxs)] = token_start_idxs
+            pos1_ids[:len(tmp_tok_pos1)] = tmp_tok_pos1
+            pos2_ids[:len(tmp_tok_pos2)] = tmp_tok_pos2
+
+            for i in range(len(tmp_ft_list)):
+                if i < len(tmp_fast_embeds_list):
+                    tmp_ft_list[i] = tmp_fast_embeds_list[i]
+
+            #tmp_ft_list = np.array(tmp_ft_list)
+            # put together
+            tmp_sent_token_ids.append(input_ids)
+            tmp_label_ids_list.append(label_ids)
+            tmp_masks.append(attention_mask)
+            self.tok_start_idxs.append(og_tok_ids)
+            self.tok_pos_list1.append(pos1_ids)
+            self.tok_pos_list2.append(pos2_ids)
+
+            self.fasttext_embeds.append(tmp_ft_list)
+
+            tmp_words, tmp_labels, subword_lengths, tmp_tok_pos1, tmp_tok_pos2, tmp_fast_embeds_list = [], [], [], [], [], []
 
         self.input_ids = np.array(tmp_sent_token_ids)
         self.attention_mask = np.array(tmp_masks)
@@ -348,8 +357,13 @@ class SegDatasetPlus(Dataset):
         self.tok_start_idxs = np.array(self.tok_start_idxs)
         self.tok_pos_list1 = np.array(self.tok_pos_list1)
         self.tok_pos_list2 = np.array(self.tok_pos_list2)
-        self.extra_feat_len += len(self.tok_pos_list1[0])
-        self.extra_feat_len += len(self.tok_pos_list2[0])
+        # print(len(self.fasttext_embeds))
+        # print(len(self.fasttext_embeds[0]))
+        # self.fasttext_embeds = np.array(self.fasttext_embeds)
+
+        # print(self.self.fasttext_embeds.shape)
+
+        self.extra_feat_len += len(self.tok_pos_list1[0]) + len(self.tok_pos_list2[0]) + 300
 
     def add_extra_features(self, add_prev_sent=False, add_next_sent=False, add_pos1=False, add_pos2=False,
                            add_fastText=False):
@@ -372,29 +386,14 @@ class SegDatasetPlus(Dataset):
 
     def __getitem__(self, index):
         mask = (self.attention_mask[index] > 0)
-        extra_feats = np.concatenate((self.tok_pos_list1[1], self.tok_pos_list2[1]))
-        return self.input_ids[index], mask, self.label_ids[index], self.tok_start_idxs[index], extra_feats
+        mask = torch.from_numpy(mask)
+        ft_embeds = np.vstack(self.fasttext_embeds[index]).astype(float)
+        ft_embeds = torch.from_numpy(ft_embeds)
+        # extra_feats = np.concatenate((self.tok_pos_list1[index], self.tok_pos_list2[index]))
+        # return torch.from_numpy(self.input_ids[index]), torch.from_numpy(mask), torch.from_numpy(self.label_ids[index]), torch.from_numpy(self.tok_start_idxs[index]), torch.from_numpy(self.tok_pos_list1[index]), torch.from_numpy(self.tok_pos_list2[index]), torch.from_numpy(self.fasttext_embeds[index])
+        return self.input_ids[index], mask, self.label_ids[index], self.tok_start_idxs[index], self.tok_pos_list1[
+            index], self.tok_pos_list2[index], ft_embeds
 
-
-def token_labels_from_file(file_name):
-    labels = set()
-    with open(file_name, "r", encoding="utf-8") as f:
-        lines = f.readlines()
-        for line in lines:
-            line = line.strip()
-            if line:
-                sample = json.loads(line)
-                doc_sent_token_labels = sample["doc_sent_token_labels"]
-                for sent_token_labels in doc_sent_token_labels:
-                    for l in sent_token_labels:
-                        # labels.add(l.lower())
-                        labels.add(l)
-    labels = list(labels)
-    labels = sorted(labels)
-    print(" Total label number: %d\n" % (len(labels)))
-    label_dict = {l: idx for idx, l in enumerate(labels)}
-    label_id_dict = {idx: l for idx, l in enumerate(labels)}
-    return label_dict, label_id_dict, labels
 
 
 class RelDataset(Dataset):
