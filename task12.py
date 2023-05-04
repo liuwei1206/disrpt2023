@@ -362,7 +362,8 @@ def evaluate_new(model, args, dataloader, tokenizer, epoch, desc="dev", write_fi
     elif desc == "test":
         gold_file = args.test_data_file.replace(".json", ".tok")
     print(gold_file)
-    pred_file = seg_preds_to_file_new(all_input_ids, all_label_ids, all_attention_mask, all_tok_idxs, args.tokenizer, args.label_list, gold_file)
+
+    pred_file = seg_preds_to_file_new(all_input_ids, all_pred_ids, all_attention_mask, all_tok_idxs, args.tokenizer, args.label_list, gold_file)
     score_dict = get_scores(gold_file, pred_file)
 
     return score_dict

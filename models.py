@@ -234,6 +234,8 @@ class BaseSegClassifier(PreTrainedModel):
         pooled_output = self.dropout(sequence_output)
         logits = self.classifier(sequence_output)
         preds = torch.argmax(logits, dim=-1)
+        # print(" ", labels[0][:6])
+        # print(preds[0][:6])
         outputs = (preds,)
 
         if flag.lower() == "train":

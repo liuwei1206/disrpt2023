@@ -62,7 +62,7 @@ def get_argparse():
     parser.add_argument("--do_freeze", default=False, action="store_true")
     parser.add_argument("--do_adv", default=False, action="store_true")
     parser.add_argument("--train_batch_size", default=16, type=int, help="move to data/config/rel_config.json")
-    parser.add_argument("--eval_batch_size", default=8, type=int)
+    parser.add_argument("--eval_batch_size", default=32, type=int)
     parser.add_argument("--max_seq_length", default=128, type=int)
     parser.add_argument("--num_train_epochs", default=10, type=int, help="training epoch")
     parser.add_argument("--learning_rate", default=1e-5, type=float, help="move to data/config/rel_config.json")
@@ -260,13 +260,13 @@ def main():
 
     # 1. prepare pretrained path
     print("Acc on %s"%(args.dataset))
-    lang_type = args.dataset.split(".")[0].lower()
-    args.lang_type = lang_type
+    # lang_type = args.dataset.split(".")[0].lower()
+    # args.lang_type = lang_type
     rel_config = json.load(open("data/config/rel_config.json"))
-    encoder_type = rel_config["lang_type"]["encoder_type"]
-    pretrained_path = rel_config["lang_type"]["pretrained_path"]
-    args.learning_rate = rel_config["lang_type"]["lr"]
-    args.train_batch_size = rel_config["lang_type"]["batch_size"]
+    encoder_type = rel_config[args.dataset]["encoder_type"]
+    pretrained_path = rel_config[args.dataset]["pretrained_path"]
+    args.learning_rate = rel_config[args.dataset]["lr"]
+    args.train_batch_size = rel_config[args.dataset]["batch_size"]
     """
     if lang_type.lower() == "deu":
         # encoder_type = "bert"
@@ -369,7 +369,7 @@ def main():
             tokenizer = XLMRobertaTokenizer.from_pretrained(pretrained_path)
             if args.feature_size > 0:
                 feature_encoder = XLMRobertaModel.from_pretrained(pretrained_path)
-        elif args.encoder_type.lower() == "Camambert":
+        elif args.encoder_type.lower() == "camembert":
             config = CamembertConfig.from_pretrained(pretrained_path)
             tokenizer = CamembertTokenizer.from_pretrained(pretrained_path)
             if args.feature_size > 0:
