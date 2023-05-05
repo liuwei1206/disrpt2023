@@ -1,0 +1,149 @@
+{
+	"deu.rst.pcc": {
+		"encoder_type": "bert",
+		"pretrained_path": "dbmdz/bert-base-german-uncased",
+		"lr": 1e-5,
+		"batch_size": 16,
+		"flag": "train_and_test"
+	},
+	"eng.dep.scidtb": {
+		"encoder_type": "roberta",
+		"pretrained_path": "roberta-base",
+                "lr": 1e-5,
+                "batch_size": 16,
+		"flag": "train_and_test"
+	},
+	"eng.pdtb.pdtb": {
+		"encoder_type": "roberta",
+		"pretrained_path": "roberta-base",
+                "lr": 1e-5,
+                "batch_size": 16,
+		"flag": "train_and_test"
+	},
+	"eng.rst.gum": {
+		"encoder_type": "roberta",
+		"pretrained_path": "roberta-base",
+                "lr": 1e-5,
+                "batch_size": 16,
+		"flag": "train_and_test"
+	},
+	"eng.rst.rstdt": {
+		"encoder_type": "roberta",
+		"pretrained_path": "roberta-base",
+                "lr": 3e-5,
+                "batch_size": 16,
+		"flag": "train_and_test"
+	},
+	"eng.sdrt.stac": {
+		"encoder_type": "roberta",
+		"pretrained_path": "roberta-base",
+                "lr": 1e-5,
+                "batch_size": 16,
+		"flag": "train_and_test"
+	},
+	"eus.rst.ert": {
+		"encoder_type": "bert",
+		"pretrained_path": "ixa-ehu/berteus-base-cased",
+                "lr": 1e-4,
+                "batch_size": 16,
+		"flag": "train_and_test"
+	},
+	"fas.rst.prstc": {
+		"encoder_type": "bert",
+		"pretrained_path": "HooshvareLab/bert-fa-base-uncased",
+		"lr": 1e-5,
+		"batch_size": 16,
+		"flag": "train_and_test"
+	},
+	"fra.sdrt.annodis": {
+		"encoder_type": "camembert",
+		"pretrained_path": "camembert-large",
+		"lr": 1e-5,
+		"batch_size": 12,
+		"flag": "train_and_test"
+	},
+	"ita.pdtb.luna": {
+		"encoder_type": "bert",
+		"pretrained_path": "dbmdz/bert-base-italian-uncased",
+		"lr": 3e-5,
+		"batch_size": 16,
+		"flag": "train_and_test"
+	},
+	"nld.rst.nldt": {
+		"encoder_type": "roberta",
+		"pretrained_path": "pdelobelle/robbert-v2-dutch-base",
+		"lr": 3e-5,
+		"batch_size": 16,
+		"flag": "train_and_test"
+	},
+	"por.rst.cstn": {
+		"encoder_type": "bert",
+		"pretrained_path": "neuralmind/bert-large-portuguese-cased",
+		"lr": 3e-5,
+		"batch_size": 12,
+		"flag": "train_and_test"
+	},
+	"rus.rst.rrt": {
+		"encoder_type": "bert",
+		"pretrained_path": "DeepPavlov/rubert-base-cased",
+		"lr": 1e-5,
+		"batch_size": 16,
+		"flag": "train_and_test"
+	},
+	"spa.rst.rststb": {
+		"encoder_type": "bert",
+		"pretrained_path": "dccuchile/bert-base-spanish-wwm-uncased",
+		"lr": 3e-5,
+		"batch_size": 16,
+		"flag": "train_and_test"
+	},
+	"spa.rst.sctb": {
+		"encoder_type": "bert",
+		"pretrained_path": "dccuchile/bert-base-spanish-wwm-uncased",
+		"lr": 3e-5,
+		"batch_size": 16,
+		"flag": "train_and_test"
+	},
+	"tur.pdtb.tdb": {
+		"encoder_type": "bert",
+		"pretrained_path": "dbmdz/bert-base-turkish-cased",
+		"lr": 3e-5,
+		"batch_size": 16,
+		"flag": "train_and_test"
+	},
+	"zho.dep.scidtb": {
+		"encoder_type": "bert",
+		"pretrained_path": "hfl/chinese-bert-wwm-ext",
+		"lr": 1e-5,
+		"batch_size": 16,
+		"flag": "train_and_test"
+	},
+	"zho.pdtb.cdtb": {
+		"encoder_type": "bert",
+		"pretrained_path": "hfl/chinese-macbert-large",
+		"lr": 3e-5,
+		"batch_size": 12,
+		"flag": "train_and_test"
+	},
+	"zho.rst.gcdt": {
+		"encoder_type": "bert",
+		"pretrained_path": "hfl/chinese-macbert-large",
+		"flag": "train_and_test",
+		"lr": 3e-5,
+		"batch_size": 12
+	},
+	"zho.rst.sctb": {
+		"encoder_type": "bert",
+		"pretrained_path": "hfl/chinese-macbert-large",
+		"lr": 3e-5,
+		"batch_size": 12,
+		"flag": "train_and_test"
+	},
+        "tha.pdtb.tdtb": {
+                "encoder_type": "camembert",
+                "pretrained_path": "airesearch/wangchanberta-base-att-spm-uncased",
+                "lr": 3e-5,
+                "batch_size": 16,
+                "flag": "train_and_test"
+        }
+}

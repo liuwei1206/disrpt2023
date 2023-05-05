@@ -1,4 +1,7 @@
-data
+data/dataset
+data/embeddings
+data/logs
+data/result
 *.pyc
 test.py
 *.log
