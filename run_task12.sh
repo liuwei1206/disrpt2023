@@ -2,7 +2,8 @@
 # fra.sdrt.annodis, ita.pdtb.luna, nld.rst.nldt, por.rst.cstn, rus.rst.rrt, spa.rst.rststb, spa.rst.sctb, tur.pdtb.tdb
 # zho.dep.scidtb, zho.pdtb.cdtb, zho.rst.gcdt, zho.rst.sctb
 # <<"COMMENT"
-python3 task12.py --do_train \
+python3 task12.py --do_train --run_plus \
+                  --model_type="bilstm+crf" \
                   --dataset="eng.dep.scidtb" \
                   --max_seq_length=512 \
                   --train_batch_size=16 \
@@ -10,7 +11,6 @@ python3 task12.py --do_train \
                   --learning_rate=3e-5 \
                   --dropout=0.1 \
                   --num_train_epochs=10 \
-                  --model_type=base \
 
 # COMMENT
 # eng.pdtb.pdtb

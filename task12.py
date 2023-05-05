@@ -446,7 +446,7 @@ def main():
     dev_data_file = os.path.join(data_dir, "{}_dev.json".format(args.dataset))
     test_data_file = os.path.join(data_dir, "{}_test.json".format(args.dataset))
     label_dict, label_list = token_labels_from_file(train_data_file)
-    # tok_pos_1, tok_pos_2, tok_pos_1_dict, tok_pos_2_dict = token_pos_from_file(train_data_file)
+    tok_pos_1, tok_pos_2, tok_pos_1_dict, tok_pos_2_dict = token_pos_from_file(train_data_file)
     args.train_data_file, args.dev_data_file, args.test_data_file = train_data_file, dev_data_file, test_data_file
     args.label_dict, args.label_list, args.num_labels = label_dict, label_list, len(label_list)
 
@@ -535,6 +535,7 @@ def main():
         args.pos1_dim = 50
         args.pos2_dim = 50
         model = BiLSTMCRFPlus(config=config, args=args)
+        print("++in")
     model = model.to(args.device)
     args.tokenizer = tokenizer
 
