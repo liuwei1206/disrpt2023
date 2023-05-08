@@ -115,7 +115,7 @@ class BaseRelClassifier(PreTrainedModel):
             token_type_ids=token_type_ids,
         )
         if features is not None and self.feature_size > 0:
-            pooled_output = torch.cat((pooled_output, features), dim=0)
+            pooled_output = torch.cat((pooled_output, features), dim=-1)
         pooled_output = self.dropout(pooled_output)
         logits = self.classifier(pooled_output)
         preds = torch.argmax(logits, dim=-1)

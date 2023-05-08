@@ -5,24 +5,25 @@
 
 ## eval only
 # eng.dep.covdtb, eng.pdtb.tedm, por.pdtb.tedm, tur.pdtb.tedm
-<<"COMMENT"
+# <<"COMMENT"
 python3 task3.py --do_train \
-                 --dataset="tha.pdtb.tdtb" \
-                 --feature_size=0 \
+                 --dataset="deu.rst.pcc" \
+                 --feature_size=134 \
                  --max_seq_length=256 \
                  # --train_batch_size=16 \
                  # --learning_rate=1e-4 \
                  # --do_adv \
 
-COMMENT
+# COMMENT
 # eng.pdtb.pdtb
 
 
-# <<"COMMENT"
+<<"COMMENT"
 # for dataset in deu.rst.pcc eng.dep.scidtb eng.rst.gum eng.sdrt.stac eus.rst.ert fas.rst.prstc fra.sdrt.annodis ita.pdtb.luna nld.rst.nldt por.rst.cstn rus.rst.rrt spa.rst.rststb spa.rst.sctb tur.pdtb.tdb zho.dep.scidtb zho.pdtb.cdtb zho.rst.gcdt zho.rst.sctb
 # for dataset in eng.pdtb.pdtb eng.rst.rstdt eus.rst.ert fra.sdrt.annodis por.pdtb.crpc tha.pdtb.tdtb zho.rst.gcdt 
 # for dataset in eng.rst.rstdt eus.rst.ert fra.sdrt.annodis tha.pdtb.tdtb
-for dataset in eng.pdtb.pdtb por.rst.cstn zho.rst.gcdt tha.pdtb.tdtb
+# for dataset in eng.pdtb.pdtb por.rst.cstn zho.rst.gcdt tha.pdtb.tdtb
+for dataset in eng.pdtb.pdtb
 do
     python3 task3.py --do_train --do_adv \
                      --dataset=${dataset} \
@@ -30,4 +31,4 @@ do
                      --feature_size=0
 
 done
-# COMMENT
+COMMENT

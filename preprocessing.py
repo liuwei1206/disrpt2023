@@ -630,7 +630,7 @@ def convert_all(data_folder_path):
             preprocessing(test_tok_file, test_conllu_file, test_rels_file, output_file_test)
 
 if __name__ == "__main__":
-    convert_all("data/dataset/")
+    # convert_all("data/dataset/")
 
     """
     # turkish
@@ -650,9 +650,9 @@ if __name__ == "__main__":
     convert_tur(tur_test_conll_file, tur_test_rel_file, tur_test_output_file)
     """
     
-    """
+    # """
     # zho
-    dataset = "deu.rst.pcc"
+    dataset = "eng.pdtb.pdtb"
     for mode in ["train", "dev", "test"]:
         tok_file = "data/dataset/{}/{}_{}.tok".format(dataset, dataset, mode)
         conll_file = "data/dataset/{}/{}_{}.conllu".format(dataset, dataset, mode)
@@ -660,7 +660,7 @@ if __name__ == "__main__":
         out_file = "data/dataset/{}/{}_{}.json".format(dataset, dataset, mode)
         preprocessing(tok_file, conll_file, rel_file, out_file)
 
-    """
+    # """
     # This part of code is for generating one dataset's fasttext embedding, everytime when you want to
     # generate the fasttext embedding from one dataset, please download it first!
 
@@ -674,8 +674,8 @@ if __name__ == "__main__":
     ft_test_path = dataset_path + ft_target_dataset + "/" + ft_target_dataset + "_test.json"
     ft_output_path = dataset_path + ft_target_dataset + "/" + ft_target_dataset + "_ftdict.npy"
 
-    ft_target_language = ft_target_dataset.split(".")[0]
-    print(ft_target_language)
+    # ft_target_language = ft_target_dataset.split(".")[0]
+    # print(ft_target_language)
 
     """
     if ft_target_language.lower() == "deu":
