@@ -23,7 +23,6 @@ from transformers import XLMRobertaConfig, XLMRobertaTokenizer, XLMRobertaModel
 from transformers import CamembertConfig, CamembertTokenizer, CamembertModel
 
 from utils import *
-from task_dataset import SegDataset
 from models import *
 from rel_eval import get_accuracy_score
 
@@ -316,6 +315,13 @@ def main():
                 feature_encoder = CamembertModel.from_pretrained(pretrained_path)
         model = BaseRelClassifier(config=config, args=args)
         dataset_name = "RelDataset"
+    elif args.model_type.lower() == "multi-task":
+        config = XLMRobertaConfig.from_pretrained(pretrained_path)
+        tokenizer = XLMRobertaTokenizer.from_pretrained(pretrained_path)
+        feature_encoder = None
+        model = BaseRelClassifier(config=config, args=args)
+        dataset_name = "MixedRelDataset"
+
     if feature_encoder is not None:
         feature_encoder = feature_encoder.to(args.device)
         feature_encoder = fix_param(feature_encoder)
