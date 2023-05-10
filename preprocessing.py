@@ -18,7 +18,8 @@ def tok_reader(file_name):
         for line in lines:
             line = line.strip()
             if line:
-                if "newdoc_id" in line.lower():
+                if "newdoc_id" in line.lower() or "newdoc id" in line.lower():
+                    # print(line)
                     tmp_doc_id = line.split("=")[1].strip()
                 else:
                     items = line.split("\t")  # check if is \t
@@ -61,7 +62,7 @@ def conll_reader(file_name):
         for line in lines:
             line = line.strip()
             if line:
-                if "newdoc_id" in line.lower():
+                if "newdoc_id" in line.lower() or "newdoc id" in line.lower():
                     if len(tmp_doc_info) > 0 and tmp_doc_id is not None:
                         # all_conll_data.append((tmp_doc_id, tmp_doc_info))
                         all_conll_data[tmp_doc_id] = tmp_doc_info
@@ -297,6 +298,7 @@ def preprocessing(tok_file, conllu_file, rel_file, output_file):
     # assert len(all_doc_data) == len(all_relation_data), (len(all_doc_data), len(all_relation_data))
 
     all_samples = []
+    print_id = 5
 
     for doc_id in all_doc_data:
         doc_tokens = all_doc_data[doc_id]
@@ -384,7 +386,12 @@ def preprocessing(tok_file, conllu_file, rel_file, output_file):
                     span_pos = int(span)
                     unit2_tokens.append(doc_tokens[span_pos - 1][1])
                     unit2_features.append(flat_doc_conll_info[span_pos - 1][1:])
-
+            # print(unit1_tokens)
+            # print(unit2_tokens)
+            # print()
+            # print_id -= 1
+            # if print_id < 0:
+            #     return
             doc_unit_tokens.append((unit1_tokens, unit2_tokens))
             doc_unit_token_features.append((unit1_features, unit2_features))
 
@@ -652,8 +659,8 @@ if __name__ == "__main__":
     
     # """
     # zho
-    dataset = "eng.pdtb.pdtb"
-    for mode in ["train", "dev", "test"]:
+    dataset = "zho.rst.sctb"
+    for mode in ["dev"]:
         tok_file = "data/dataset/{}/{}_{}.tok".format(dataset, dataset, mode)
         conll_file = "data/dataset/{}/{}_{}.conllu".format(dataset, dataset, mode)
         rel_file = "data/dataset/{}/{}_{}.rels".format(dataset, dataset, mode)

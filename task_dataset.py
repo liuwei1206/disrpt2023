@@ -430,6 +430,7 @@ class RelDataset(Dataset):
                 doc_unit_labels = sample["doc_unit_labels"]
 
                 for unit_words, unit_label in zip(doc_units, doc_unit_labels):
+                    unit_label = unit_label.lower()
                     if unit_label not in self.label_dict:
                         continue
                     unit1 = unit_words[0]

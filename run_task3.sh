@@ -7,8 +7,9 @@
 # eng.dep.covdtb, eng.pdtb.tedm, por.pdtb.tedm, tur.pdtb.tedm
 # <<"COMMENT"
 python3 task3.py --do_train \
-                 --dataset="deu.rst.pcc" \
-                 --feature_size=134 \
+                 --model_type="base" \
+                 --dataset="super.pdtb" \
+                 --feature_size=0 \
                  --max_seq_length=256 \
                  # --train_batch_size=16 \
                  # --learning_rate=1e-4 \
@@ -23,7 +24,7 @@ python3 task3.py --do_train \
 # for dataset in eng.pdtb.pdtb eng.rst.rstdt eus.rst.ert fra.sdrt.annodis por.pdtb.crpc tha.pdtb.tdtb zho.rst.gcdt 
 # for dataset in eng.rst.rstdt eus.rst.ert fra.sdrt.annodis tha.pdtb.tdtb
 # for dataset in eng.pdtb.pdtb por.rst.cstn zho.rst.gcdt tha.pdtb.tdtb
-for dataset in eng.pdtb.pdtb
+for dataset in eng.rst.rstdt
 do
     python3 task3.py --do_train --do_adv \
                      --dataset=${dataset} \

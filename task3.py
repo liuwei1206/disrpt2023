@@ -21,6 +21,7 @@ from transformers.models.bert import BertConfig, BertTokenizer, BertModel
 from transformers.models.electra import ElectraConfig, ElectraTokenizer, ElectraModel
 from transformers import XLMRobertaConfig, XLMRobertaTokenizer, XLMRobertaModel
 from transformers import CamembertConfig, CamembertTokenizer, CamembertModel
+from sklearn.metrics import f1_score, accuracy_score
 
 from utils import *
 from models import *
@@ -175,19 +176,19 @@ def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_da
         model.eval()
         if False and train_dataloader is not None:
             score_dict = evaluate(model, args, train_dataloader, tokenizer, epoch, desc="train")
-            print("\nTrain: Epoch=%d, Acc=%.4f\n" % (epoch, score_dict["acc_score"]))
+            print("\nTrain: Epoch=%d, Acc=%.4f, F1=%.4f\n" % (epoch, score_dict["acc_score"], score_dict["f1_score"]))
         if dev_dataloader is not None:
             score_dict = evaluate(model, args, dev_dataloader, tokenizer, epoch, desc="dev")
-            if best_dev < score_dict["acc_score"]:
-                best_dev = score_dict["acc_score"]
-            print("\nDev: Epoch=%d, Acc=%.4f\n" % (epoch, score_dict["acc_score"]))
+            if best_dev < score_dict["acc_score"] + score_dict["f1_score"]:
+                best_dev = score_dict["acc_score"] + score_dict["f1_score"]
+            print("\nDev: Epoch=%d, Acc=%.4f, F1=%.4f\n" % (epoch, score_dict["acc_score"], score_dict["f1_score"]))
         if test_dataloader is not None:
             score_dict = evaluate(model, args, test_dataloader, tokenizer, epoch, desc="test")
-            print("\nTest: Epoch=%d, Acc=%.4f\n" % (epoch, score_dict["acc_score"]))
+            print("\nTest: Epoch=%d, Acc=%.4f, F1=%.4f\n" % (epoch, score_dict["acc_score"], score_dict["f1_score"]))
         output_dir = os.path.join(args.output_dir, TIME_CHECKPOINT_DIR)
         output_dir = os.path.join(output_dir, f"{PREFIX_CHECKPOINT_DIR}_{epoch}")
-        # os.makedirs(output_dir, exist_ok=True)
-        # torch.save(model.state_dict(), os.path.join(output_dir, "pytorch_model.bin"))
+        os.makedirs(output_dir, exist_ok=True)
+        torch.save(model.state_dict(), os.path.join(output_dir, "pytorch_model.bin"))
     print("Best Acc on dev: %.4f\n"%(best_dev))
 
 
@@ -196,6 +197,7 @@ def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=F
     all_attention_mask = None
     all_label_ids = None
     all_pred_ids = None
+    # all_lang_ids = None
     for batch in tqdm(dataloader, desc=desc):
         batch = tuple(t.to(args.device) for t in batch)
         inputs = {
@@ -214,17 +216,20 @@ def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=F
         attention_mask = batch[1].detach().cpu().numpy()
         label_ids = batch[3].detach().cpu().numpy()
         pred_ids = preds.detach().cpu().numpy()
+        # lang_ids = batch[5].detach().cpu().numpy()
 
         if all_input_ids is None:
             all_input_ids = input_ids
             all_attention_mask = attention_mask
             all_label_ids = label_ids
             all_pred_ids = pred_ids
+            # all_lang_ids = lang_ids
         else:
             all_input_ids = np.append(all_input_ids, input_ids, axis=0)
             all_attention_mask = np.append(all_attention_mask, attention_mask, axis=0)
             all_label_ids = np.append(all_label_ids, label_ids)
             all_pred_ids = np.append(all_pred_ids, pred_ids)
+            # all_lang_ids = np.append(all_lang_ids, lang_ids)
 
     ## evaluation
     """
@@ -237,10 +242,16 @@ def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=F
     pred_file = rel_preds_to_file(all_pred_ids, args.label_list, gold_file)
     score_dict = get_accuracy_score(gold_file, pred_file)
     """
-    print(all_label_ids[:15])
-    print(all_pred_ids[:15])
-    acc = np.sum(all_label_ids == all_pred_ids) / all_label_ids.shape[0]
-    score_dict = {"acc_score": acc}
+    # print(all_label_ids[:15])
+    # print(all_pred_ids[:15])
+    # mask_pos = (all_lang_ids == 0)
+    # all_label_ids = all_label_ids[mask_pos]
+    # all_pred_ids = all_pred_ids[mask_pos]
+    # print(all_label_ids.shape[0])
+    # acc = np.sum(all_label_ids == all_pred_ids) / all_label_ids.shape[0]
+    acc = accuracy_score(y_true=all_label_ids, y_pred=all_pred_ids)
+    f1 = f1_score(y_true=all_label_ids, y_pred=all_pred_ids, average="macro")
+    score_dict = {"acc_score": acc, "f1_score": f1}
 
     return score_dict
 
@@ -352,17 +363,52 @@ def main():
         train(model, args, tokenizer, train_dataloader, dev_dataloader, test_dataloader)
 
     if args.do_dev or args.do_test:
-        time_dir = "good"
+        time_dir = "base"
         temp_dir = os.path.join(args.output_dir, time_dir)
         temp_file = os.path.join(temp_dir, "checkpoint_{}/pytorch_model.bin")
-        if do_dev:
+        if args.do_dev:
+            ## rst
+            dev_data_file = "data/dataset/eng.rst.gum/eng.rst.gum_dev.json"
+            dev_data_file = "data/dataset/eng.rst.rstdt/eng.rst.rstdt_dev.json"
+            dev_data_file = "data/dataset/eus.rst.ert/eus.rst.ert_dev.json"
+            dev_data_file = "data/dataset/fas.rst.prstc/fas.rst.prstc_dev.json"
+            dev_data_file = "data/dataset/nld.rst.nldt/nld.rst.nldt_dev.json"
+            dev_data_file = "data/dataset/por.rst.cstn/por.rst.cstn_dev.json"
+            dev_data_file = "data/dataset/rus.rst.rrt/rus.rst.rrt_dev.json"
+            dev_data_file = "data/dataset/spa.rst.rststb/spa.rst.rststb_dev.json"
+            dev_data_file = "data/dataset/spa.rst.sctb/spa.rst.sctb_dev.json"
+            dev_data_file = "data/dataset/zho.rst.sctb/zho.rst.sctb_dev.json" 
+            ## dep
+            # dev_data_file = "data/dataset/eng.dep.scidtb/eng.dep.scidtb_dev.json"
+            ## pdtb
+            # dev_data_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_dev.json"
+            # dev_data_file = "data/dataset/tha.pdtb.tdtb/tha.pdtb.tdtb_dev.json"
+            # dev_data_file = "data/dataset/eng.pdtb.pdtb/eng.pdtb.pdtb_dev.json"
+            print(dev_data_file)
             dev_dataset = MyDataset(dev_data_file, params=dataset_params)
             dev_dataloader = get_dataloader(dev_dataset, args, mode="dev")
-        if do_test:
+        if args.do_test:
+            ## rst
+            test_data_file = "data/dataset/eng.rst.gum/eng.rst.gum_test.json"
+            test_data_file = "data/dataset/eng.rst.rstdt/eng.rst.rstdt_test.json"
+            test_data_file = "data/dataset/eus.rst.ert/eus.rst.ert_test.json"
+            test_data_file = "data/dataset/fas.rst.prstc/fas.rst.prstc_test.json"
+            test_data_file = "data/dataset/nld.rst.nldt/nld.rst.nldt_test.json"
+            test_data_file = "data/dataset/por.rst.cstn/por.rst.cstn_test.json"
+            test_data_file = "data/dataset/rus.rst.rrt/rus.rst.rrt_test.json"
+            test_data_file = "data/dataset/spa.rst.rststb/spa.rst.rststb_test.json"
+            test_data_file = "data/dataset/spa.rst.sctb/spa.rst.sctb_test.json"
+            test_data_file = "data/dataset/zho.rst.sctb/zho.rst.sctb_test.json"
+            ## dep
+            # test_data_file = "data/dataset/eng.dep.scidtb/eng.dep.scidtb_test.json"
+            ## pdtb
+            # test_data_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_test.json"
+            # test_data_file = "data/dataset/tha.pdtb.tdtb/tha.pdtb.tdtb_test.json"
+            # test_data_file = "data/dataset/eng.pdtb.pdtb/eng.pdtb.pdtb_test.json"
             test_dataset = MyDataset(test_data_file, params=dataset_params)
             test_dataloader = get_dataloader(test_dataset, args, mode="test")
 
-        for epoch in range(1, args.num_train_epochs+1):
+        for epoch in range(3, args.num_train_epochs+1):
             checkpoint_file = temp_file.format(str(epoch))
             print(" Epoch: {}".format(str(epoch)))
             print(checkpoint_file)
@@ -372,10 +418,10 @@ def main():
 
             if args.do_dev:
                 score_dict = evaluate(model, args, dev_dataloader, tokenizer, epoch, desc="dev")
-                print(" Dev: Epoch=%d, Acc=%.4f\n" % (epoch, score_dict["acc_score"]))
+                print(" Dev: Epoch=%d, Acc=%.4f, F1=%.4f\n" % (epoch, score_dict["acc_score"], score_dict["f1_score"]))
             if args.do_test:
                 score_dict = evaluate(model, args, test_dataloader, tokenizer, epoch, desc="test")
-                print(" Test: Epoch=%d, Acc=%.4f\n" % (epoch, score_dict["acc_score"]))
+                print(" Test: Epoch=%d, Acc=%.4f, F1=%.4f\n" % (epoch, score_dict["acc_score"], score_dict["f1_score"]))
             print()
 
 if __name__ == "__main__":
