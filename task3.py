@@ -52,7 +52,6 @@ def get_argparse():
     parser.add_argument("--data_dir", default="data/dataset", type=str)
     parser.add_argument("--dataset", default="pdtb2", type=str, help="pdtb2, pdtb3")
     parser.add_argument("--output_dir", default="data/result", type=str)
-    parser.add_argument("--feature_size", default=0, type=int)
 
     # for training
     parser.add_argument("--model_type", default="base", type=str, help="roberta-bilstm-crf")
@@ -150,7 +149,6 @@ def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_da
                 "input_ids": batch[0],
                 "attention_mask": batch[1],
                 "token_type_ids": batch[2],
-                "features": batch[4],
                 "labels": batch[3],
                 "flag": "Train"
             }
@@ -197,14 +195,12 @@ def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=F
     all_attention_mask = None
     all_label_ids = None
     all_pred_ids = None
-    # all_lang_ids = None
     for batch in tqdm(dataloader, desc=desc):
         batch = tuple(t.to(args.device) for t in batch)
         inputs = {
             "input_ids": batch[0],
             "attention_mask": batch[1],
             "token_type_ids": batch[2],
-            "features": batch[4],
             "labels": batch[3],
             "flag": "Eval"
         }
@@ -216,20 +212,17 @@ def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=F
         attention_mask = batch[1].detach().cpu().numpy()
         label_ids = batch[3].detach().cpu().numpy()
         pred_ids = preds.detach().cpu().numpy()
-        # lang_ids = batch[5].detach().cpu().numpy()
 
         if all_input_ids is None:
             all_input_ids = input_ids
             all_attention_mask = attention_mask
             all_label_ids = label_ids
             all_pred_ids = pred_ids
-            # all_lang_ids = lang_ids
         else:
             all_input_ids = np.append(all_input_ids, input_ids, axis=0)
             all_attention_mask = np.append(all_attention_mask, attention_mask, axis=0)
             all_label_ids = np.append(all_label_ids, label_ids)
             all_pred_ids = np.append(all_pred_ids, pred_ids)
-            # all_lang_ids = np.append(all_lang_ids, lang_ids)
 
     ## evaluation
     """
@@ -242,13 +235,7 @@ def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=F
     pred_file = rel_preds_to_file(all_pred_ids, args.label_list, gold_file)
     score_dict = get_accuracy_score(gold_file, pred_file)
     """
-    # print(all_label_ids[:15])
-    # print(all_pred_ids[:15])
-    # mask_pos = (all_lang_ids == 0)
-    # all_label_ids = all_label_ids[mask_pos]
-    # all_pred_ids = all_pred_ids[mask_pos]
-    # print(all_label_ids.shape[0])
-    # acc = np.sum(all_label_ids == all_pred_ids) / all_label_ids.shape[0]
+
     acc = accuracy_score(y_true=all_label_ids, y_pred=all_pred_ids)
     f1 = f1_score(y_true=all_label_ids, y_pred=all_pred_ids, average="macro")
     score_dict = {"acc_score": acc, "f1_score": f1}
@@ -297,52 +284,35 @@ def main():
     args.output_dir = output_dir
 
     # 3.define models
-    feature_encoder = None
     if args.model_type.lower() == "base":
         if args.encoder_type.lower() == "roberta":
             config = RobertaConfig.from_pretrained(args.pretrained_path)
             tokenizer = RobertaTokenizer.from_pretrained(args.pretrained_path)
-            if args.feature_size > 0:
-                feature_encoder = RobertaModel.from_pretrained(args.pretrained_path)
         elif args.encoder_type.lower() == "bert":
             config = BertConfig.from_pretrained(args.pretrained_path)
             tokenizer = BertTokenizer.from_pretrained(args.pretrained_path)
-            if args.feature_size > 0:
-                feature_encoder = BertModel.from_pretrained(args.pretrained_path)
         elif args.encoder_type.lower() == "electra":
             config = ElectraConfig.from_pretrained(pretrained_path)
             tokenizer = ElectraTokenizer.from_pretrained(pretrained_path)
-            if args.feature_size > 0:
-                feature_encoder = ElectraModel.from_pretrained(args.pretrained_path)
         elif args.encoder_type.lower() == "xlm-roberta":
             config = XLMRobertaConfig.from_pretrained(pretrained_path)
             tokenizer = XLMRobertaTokenizer.from_pretrained(pretrained_path)
-            if args.feature_size > 0:
-                feature_encoder = XLMRobertaModel.from_pretrained(pretrained_path)
         elif args.encoder_type.lower() == "camembert":
             config = CamembertConfig.from_pretrained(pretrained_path)
             tokenizer = CamembertTokenizer.from_pretrained(pretrained_path)
-            if args.feature_size > 0:
-                feature_encoder = CamembertModel.from_pretrained(pretrained_path)
         model = BaseRelClassifier(config=config, args=args)
         dataset_name = "RelDataset"
     elif args.model_type.lower() == "multi-task":
         config = XLMRobertaConfig.from_pretrained(pretrained_path)
         tokenizer = XLMRobertaTokenizer.from_pretrained(pretrained_path)
-        feature_encoder = None
         model = BaseRelClassifier(config=config, args=args)
         dataset_name = "MixedRelDataset"
 
-    if feature_encoder is not None:
-        feature_encoder = feature_encoder.to(args.device)
-        feature_encoder = fix_param(feature_encoder)
     model = model.to(args.device)
     dataset_params = {
         "tokenizer": tokenizer,
         "max_seq_length": args.max_seq_length,
         "label_dict": label_dict,
-        "encoder": feature_encoder,
-
     }
     dataset_module = __import__("task_dataset")
     MyDataset = getattr(dataset_module, dataset_name)

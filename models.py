@@ -35,12 +35,11 @@ class BaseRelClassifier(PreTrainedModel):
             self.encoder = XLMRobertaModel.from_pretrained(args.pretrained_path, config=config)
         elif self.encoder_type == "camembert":
             self.encoder = CamembertModel.from_pretrained(args.pretrained_path, config=config)
-        self.classifier = nn.Linear(config.hidden_size+args.feature_size, args.num_labels)
+        self.classifier = nn.Linear(config.hidden_size, args.num_labels)
         self.dropout = nn.Dropout(args.dropout)
         self.num_labels = args.num_labels
         self.do_freeze = args.do_freeze
         self.do_adv = args.do_adv
-        self.feature_size = args.feature_size
 
         if self.do_freeze:
             for name, param in self.encoder.named_parameters():
@@ -79,7 +78,7 @@ class BaseRelClassifier(PreTrainedModel):
         perturbed_embedding_output = embedding_output + epsilon * (loss_grad / (loss_grad_norm.reshape(-1, 1, 1)))
         return perturbed_embedding_output
 
-    def adversarial_forward(self, embedding_output, perturbed_embedding_output, attention_mask, labels, features=None):
+    def adversarial_forward(self, embedding_output, perturbed_embedding_output, attention_mask, labels):
         reserve_cls_mask = torch.zeros_like(embedding_output).to(embedding_output.device)
         reserve_cls_mask[:, 0, :] = 1
         perturbed_embedding_output = torch.where(reserve_cls_mask.byte(), embedding_output, perturbed_embedding_output)
@@ -92,8 +91,6 @@ class BaseRelClassifier(PreTrainedModel):
         )
         sequence_output = encoder_outputs[0]
         pooled_output = self.encoder.pooler(sequence_output)
-        if features is not None and self.feature_size > 0:
-            pooled_output = torch.cat((pooled_output, features), dim=-1)
         pooled_output = self.dropout(pooled_output)
         logits = self.classifier(pooled_output)
         loss_fct = CrossEntropyLoss(ignore_index=-100)
@@ -105,7 +102,6 @@ class BaseRelClassifier(PreTrainedModel):
         input_ids,
         attention_mask=None,
         token_type_ids=None,
-        features=None,
         labels=None,
         flag="Train"
     ):
@@ -114,8 +110,6 @@ class BaseRelClassifier(PreTrainedModel):
             attention_mask=attention_mask,
             token_type_ids=token_type_ids,
         )
-        if features is not None and self.feature_size > 0:
-            pooled_output = torch.cat((pooled_output, features), dim=-1)
         pooled_output = self.dropout(pooled_output)
         logits = self.classifier(pooled_output)
         preds = torch.argmax(logits, dim=-1)
@@ -131,7 +125,6 @@ class BaseRelClassifier(PreTrainedModel):
                     perturbed_embedding_output,
                     attention_mask,
                     labels,
-                    features=features,
                 )
                 loss = loss + adv_loss
             outputs = (loss,) + outputs
