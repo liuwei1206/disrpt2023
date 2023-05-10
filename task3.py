@@ -187,8 +187,8 @@ def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_da
             print("\nTest: Epoch=%d, Acc=%.4f, F1=%.4f\n" % (epoch, score_dict["acc_score"], score_dict["f1_score"]))
         output_dir = os.path.join(args.output_dir, TIME_CHECKPOINT_DIR)
         output_dir = os.path.join(output_dir, f"{PREFIX_CHECKPOINT_DIR}_{epoch}")
-        # os.makedirs(output_dir, exist_ok=True)
-        # torch.save(model.state_dict(), os.path.join(output_dir, "pytorch_model.bin"))
+        os.makedirs(output_dir, exist_ok=True)
+        torch.save(model.state_dict(), os.path.join(output_dir, "pytorch_model.bin"))
     print("Best Acc on dev: %.4f\n"%(best_dev))
 
 
@@ -242,8 +242,8 @@ def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=F
     pred_file = rel_preds_to_file(all_pred_ids, args.label_list, gold_file)
     score_dict = get_accuracy_score(gold_file, pred_file)
     """
-    # print(all_label_ids[:15])
-    # print(all_pred_ids[:15])
+    print(all_label_ids[:15])
+    print(all_pred_ids[:15])
     # mask_pos = (all_lang_ids == 0)
     # all_label_ids = all_label_ids[mask_pos]
     # all_pred_ids = all_pred_ids[mask_pos]
@@ -363,7 +363,7 @@ def main():
         train(model, args, tokenizer, train_dataloader, dev_dataloader, test_dataloader)
 
     if args.do_dev or args.do_test:
-        time_dir = "base"
+        time_dir = "large"
         temp_dir = os.path.join(args.output_dir, time_dir)
         temp_file = os.path.join(temp_dir, "checkpoint_{}/pytorch_model.bin")
         if args.do_dev:
@@ -380,12 +380,16 @@ def main():
             # dev_data_file = "data/dataset/zho.rst.sctb/zho.rst.sctb_dev.json" 
             ## dep
             # dev_data_file = "data/dataset/eng.dep.scidtb/eng.dep.scidtb_dev.json"
+            # dev_data_file = "data/dataset/eng.dep.covdtb/eng.dep.covdtb_dev.json"
             ## pdtb
             # dev_data_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_dev.json"
             # dev_data_file = "data/dataset/tha.pdtb.tdtb/tha.pdtb.tdtb_dev.json"
             # dev_data_file = "data/dataset/eng.pdtb.pdtb/eng.pdtb.pdtb_dev.json"
+            # dev_data_file = "data/dataset/por.pdtb.tedm/por.pdtb.tedm_dev.json"
+            # dev_date_file = "data/dataset/por.pdtb.crpc/por.pdtb.crpc_dev.json"
+            # dev_data_file = "data/dataset/eng.pdtb.tedm/eng.pdtb.tedm_dev.json"
             ## sdrt
-            dev_data_file = "data/dataset/eng.sdrt.stac/eng.sdrt.stac_dev.json"
+            # dev_data_file = "data/dataset/eng.sdrt.stac/eng.sdrt.stac_dev.json"
             print(dev_data_file)
             dev_dataset = MyDataset(dev_data_file, params=dataset_params)
             dev_dataloader = get_dataloader(dev_dataset, args, mode="dev")
@@ -403,12 +407,16 @@ def main():
             # test_data_file = "data/dataset/zho.rst.sctb/zho.rst.sctb_test.json"
             ## dep
             # test_data_file = "data/dataset/eng.dep.scidtb/eng.dep.scidtb_test.json"
+            # test_data_file = "data/dataset/eng.dep.covdtb/eng.dep.covdtb_test.json"
             ## pdtb
             # test_data_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_test.json"
             # test_data_file = "data/dataset/tha.pdtb.tdtb/tha.pdtb.tdtb_test.json"
             # test_data_file = "data/dataset/eng.pdtb.pdtb/eng.pdtb.pdtb_test.json"
+            # test_data_file = "data/dataset/por.pdtb.tedm/por.pdtb.tedm_test.json"
+            # test_data_file = "data/dataset/eng.pdtb.tedm/eng.pdtb.tedm_test.json"
+            # test_date_file = "data/dataset/por.pdtb.crpc/por.pdtb.crpc_test.json"
             ## sdrt
-            test_data_file = "data/dataset/eng.sdrt.stac/eng.sdrt.stac_test.json"
+            # test_data_file = "data/dataset/eng.sdrt.stac/eng.sdrt.stac_test.json"
             test_dataset = MyDataset(test_data_file, params=dataset_params)
             test_dataloader = get_dataloader(test_dataset, args, mode="test")
 

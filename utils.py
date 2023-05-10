@@ -63,7 +63,8 @@ def rel_labels_from_file(file_name):
                 doc_unit_labels = sample["doc_unit_labels"]
                 for l in doc_unit_labels:
                     # labels.add(l.lower())
-                    label_frequency[l.lower()] += 1
+                    # label_frequency[l.lower()] += 1
+                    label_frequency[l] += 1
     labels = []
     for key in label_frequency:
         if label_frequency[key] >= 0:
