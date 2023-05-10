@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 from collections import defaultdict
-from utils import encode_words, get_similarity_features
+from utils import encode_words, get_similarity_features, unify_rel_labels
 
 
 class SegDataset(Dataset):
@@ -401,7 +401,6 @@ class RelDataset(Dataset):
         self.max_seq_length = params["max_seq_length"]
         self.tokenizer = params["tokenizer"]
         self.label_dict = params["label_dict"]
-        self.encoder = params["encoder"]
 
         self._init_dataset(file_name)
 
@@ -412,34 +411,30 @@ class RelDataset(Dataset):
         all_input_ids = []
         all_attention_mask = []
         all_token_type_ids = []
-        all_sim_features = []
         all_label_ids = []
         label_frequency = defaultdict(int)
-        all_connectives = open("data/dataset/connectives.txt", "r", encoding="utf-8").readlines()
-        all_connectives = [conn.strip() for conn in all_connectives]
-        if self.encoder is not None:
-            conn_reps = encode_words(all_connectives, self.encoder, self.tokenizer, 10)
-        else:
-            conn_reps = None
 
         for text in all_texts:
             text = text.strip()
             if text:
                 sample = json.loads(text)
+                dname = sample["dname"]
                 doc_units = sample["doc_units"]
                 doc_unit_labels = sample["doc_unit_labels"]
 
                 for unit_words, unit_label in zip(doc_units, doc_unit_labels):
+<<<<<<< HEAD
                     # unit_label = unit_label.lower()
                     # print(unit_label)
                     if unit_label not in self.label_dict:
                         continue
+=======
+                    unit_label = unify_rel_labels(unit_label, dname)
+                    # if unit_label not in self.label_dict:
+                    #     continue
+>>>>>>> bd180aabcc885fefc17f09af97db1b2644b29076
                     unit1 = unit_words[0]
                     unit2 = unit_words[1]
-                    if self.encoder is not None:
-                        sim_features = get_similarity_features(unit1, unit2, conn_reps, self.encoder, self.tokenizer)
-                    else:
-                        sim_features = torch.zeros(134)
 
                     arg1 = " ".join(unit1)
                     arg2 = " ".join(unit2)
@@ -461,16 +456,14 @@ class RelDataset(Dataset):
                     if unit_label in self.label_dict:
                         label_id = self.label_dict[unit_label]
                     else:
-                        label_id = 0
+                        label_id = -100
 
                     # put together
-                    all_sim_features.append(sim_features)
                     all_input_ids.append(input_ids)
                     all_attention_mask.append(attention_mask)
                     all_token_type_ids.append(token_type_ids)
                     all_label_ids.append(label_id)
 
-        self.sim_features = all_sim_features
         self.input_ids = all_input_ids
         self.attention_mask = all_attention_mask
         self.token_type_ids = all_token_type_ids
@@ -488,103 +481,6 @@ class RelDataset(Dataset):
             self.attention_mask[index],
             self.token_type_ids[index],
             torch.tensor(self.label_ids[index]),
-            self.sim_features[index],
         )
-
-
-class MixedRelDataset(Dataset):
-    def __init__(self, file_name, params):
-        self.max_seq_length = params["max_seq_length"]
-        self.tokenizer = params["tokenizer"]
-        self.label_dict = params["label_dict"]
-        self.encoder = params["encoder"]
-        self.corpus2id = {
-            "deu.rst.pcc": 0, "eng.rst.gum": 1, "eng.rst.rstdt": 2,
-            "fas.rst.prstc": 3, "por.rst.cstn": 4, "spa.rst.rststb": 5
-        }
-
-        self._init_dataset(file_name)
-
-    def _init_dataset(self, file_name):
-        with open(file_name, "r", encoding="utf-8") as f:
-            all_texts = f.readlines()
-
-        all_input_ids = []
-        all_attention_mask = []
-        all_token_type_ids = []
-        all_sim_features = []
-        all_label_ids = []
-        all_corpus_ids = []
-        label_frequency = defaultdict(int)
-
-        for text in all_texts:
-            text = text.strip()
-            if text:
-                sample = json.loads(text)
-                doc_units = sample["doc_units"]
-                doc_unit_labels = sample["doc_unit_labels"]
-                corpus_name = sample["corpus_name"]
-
-                for unit_words, unit_label in zip(doc_units, doc_unit_labels):
-                    if unit_label not in self.label_dict:
-                        continue
-                    unit1 = unit_words[0]
-                    unit2 = unit_words[1]
-                    sim_features = torch.zeros(134)
-
-                    arg1 = " ".join(unit1)
-                    arg2 = " ".join(unit2)
-                    res = self.tokenizer(
-                        text=arg1,
-                        text_pair=arg2,
-                        padding="max_length",
-                        truncation=True,
-                        max_length=self.max_seq_length,
-                        return_tensors="pt"
-                    )
-                    input_ids = res.input_ids[0]
-                    attention_mask = res.attention_mask[0]
-                    if "token_type_ids" in res:
-                        token_type_ids = res.token_type_ids[0]
-                    else:
-                        token_type_ids = torch.zeros_like(attention_mask)
-                    label_frequency[unit_label] += 1
-                    if unit_label in self.label_dict:
-                        label_id = self.label_dict[unit_label]
-                    else:
-                        label_id = 0
-                    corpus_id = self.corpus2id[corpus_name]
-
-                    # put together
-                    all_sim_features.append(sim_features)
-                    all_input_ids.append(input_ids)
-                    all_attention_mask.append(attention_mask)
-                    all_token_type_ids.append(token_type_ids)
-                    all_label_ids.append(label_id)
-                    all_corpus_ids.append(corpus_id)
-
-        self.sim_features = all_sim_features
-        self.input_ids = all_input_ids
-        self.attention_mask = all_attention_mask
-        self.token_type_ids = all_token_type_ids
-        self.label_ids = np.array(all_label_ids)
-        self.corpus_ids = np.array(all_corpus_ids)
-        # print(all_label_ids)
-        print(label_frequency)
-        self.total_size = len(all_input_ids)
-
-    def __len__(self):
-        return self.total_size
-
-    def __getitem__(self, index):
-        return (
-            self.input_ids[index],
-            self.attention_mask[index],
-            self.token_type_ids[index],
-            torch.tensor(self.label_ids[index]),
-            self.sim_features[index],
-            torch.tensor(self.corpus_ids[index])
-        )
-
 
 

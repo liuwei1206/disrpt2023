@@ -52,6 +52,35 @@ def token_pos_from_file(file_name):
     tok_pos_2_dict["SEPCIAL_TOKEN"] = 0
     return tok_pos_1, tok_pos_2, tok_pos_1_dict, tok_pos_2_dict
 
+
+def unify_rel_labels(label, corpus_name):
+    """
+    Here we convert original label into an unified label
+    Args:
+        label: original label
+        corpus_name:
+    """
+    if corpus_name == "eng.dep.covdtb":
+        return label.lower()
+    elif corpus_name == "eng.sdrt.stac":
+        return label.lower()
+    else:
+        return label
+
+def rel_label_to_original(label, corpus_name):
+    """
+    We remap the rel label to original one. Doing so, we can recall rel_eval
+    Args:
+        label:
+        corpus_name:
+    """
+    if corpus_name == "eng.dep.covdtb":
+        return label.upper()
+    elif corpus_name == "eng.sdrt.stac":
+        return label.capitalize()
+    else:
+        return label
+
 def rel_labels_from_file(file_name):
     label_frequency = defaultdict(int)
     with open(file_name, "r", encoding="utf-8") as f:
@@ -60,11 +89,16 @@ def rel_labels_from_file(file_name):
             line = line.strip()
             if line:
                 sample = json.loads(line)
+                dname = sample["dname"]
                 doc_unit_labels = sample["doc_unit_labels"]
                 for l in doc_unit_labels:
+<<<<<<< HEAD
                     # labels.add(l.lower())
                     # label_frequency[l.lower()] += 1
                     label_frequency[l] += 1
+=======
+                    label_frequency[unify_rel_labels(l, dname)] += 1
+>>>>>>> bd180aabcc885fefc17f09af97db1b2644b29076
     labels = []
     for key in label_frequency:
         if label_frequency[key] >= 0:
@@ -73,7 +107,6 @@ def rel_labels_from_file(file_name):
     labels = sorted(labels)
     label_dict = {l: idx for idx, l in enumerate(labels)}
     print(label_dict)
-    # print(labels)
     print(" Total label number: %d\n"%(len(labels)))
 
     return label_dict, labels
@@ -225,7 +258,9 @@ def generate_ft_dict(train_file_path, dev_file_path, test_file_path, output_path
 
 
 def rel_preds_to_file(pred_ids, label_list, gold_file):
+    dname = gold_file.split("/")[-1].split("_")[0].strip()
     pred_labels = [label_list[id] for id in pred_ids]
+    pred_labels = [rel_label_to_original(label, dname) for label in pred_labels]
     valid_lines = []
     with open(gold_file, "r", encoding="utf-8") as f:
         lines = f.readlines()
@@ -368,4 +403,96 @@ def get_similarity_features(word_list1, word_list2, conn_reps, encoder, tokenize
 
     return features
 
+def merge_datasets(dataset_list, mode="rst"):
+    all_merged_texts = []
+    for dataset in dataset_list:
+        print(dataset)
+        data_dir = os.path.join("data/dataset", dataset)
+        data_file = os.path.join(data_dir, "{}_train.json".format(dataset))
+        with open(data_file, "r", encoding="utf-8") as f:
+            all_texts = f.readlines()
+            for text in all_texts:
+                text = text.strip()
+                if text:
+                    sample = json.loads(text)
+                    doc_units = sample["doc_units"]
+                    doc_unit_labels = sample["doc_unit_labels"]
+                    corpus_name = dataset
+                    new_doc_unit_labels = []
+                    for label in doc_unit_labels:
+                        new_doc_unit_labels.append(label)
 
+                    new_sample = {}
+                    new_sample["corpus_name"] = corpus_name
+                    new_sample["doc_units"] = doc_units
+                    new_sample["doc_unit_labels"] = new_doc_unit_labels
+                    all_merged_texts.append(new_sample)
+
+    out_dir = os.path.join("data/dataset", "super.{}".format(mode))
+    os.makedirs(out_dir, exist_ok=True)
+    out_file = os.path.join(out_dir, "super.{}_train.json".format(mode))
+    with open(out_file, "w", encoding="utf-8") as f:
+        for text in all_merged_texts:
+            f.write("%s\n"%(json.dumps(text, ensure_ascii=False)))
+
+
+def merge_datasets(discourse_type="rst"):
+    """
+    merge a group of corpus for training
+    Args:
+        dataset_list: corpus list
+        mode:
+    """
+    out_dir = os.path.join("data/dataset", "super.{}".format(discourse_type))
+    os.makedirs(out_dir, exist_ok=True)
+    out_file = os.path.join(out_dir, "super.{}_train.json".format(discourse_type))
+
+    if os.path.exists(out_file):
+        return out_file
+
+    if discourse_type == "rst":
+        # we remove the zho.rst.gcdt because this corpus has no overlaping labels with other corpus
+        dataset_list = [
+            "deu.rst.pcc", "eng.rst.gum", "eng.rst.rstdt",
+            "eus.rst.ert", "fas.rst.prstc", "nld.rst.nldt",
+            "por.rst.cstn", "rus.rst.rrt", "spa.rst.rststb",
+            "spa.rst.sctb","zho.rst.sctb"
+        ]
+    elif discourse_type == "pdtb":
+        # we remove the zho.pdtb.cdtb because this corpus has no common labels with other corpus
+        dataset_list = [
+            "ita.pdtb.luna", "tur.pdtb.tdb",
+            "tha.pdtb.tdtb", "eng.pdt.pdtb"
+        ]
+    elif discourse_type == "dep":
+        dataset_list = ["eng.dep.scidtb", "zho.dep.scidtb"]
+    elif discourse_type == "sdrt":
+        dataset_list = ["eng.sdrt.stac", "fra.sdrt.annodis"]
+    all_merged_texts = []
+    for dataset in dataset_list:
+        data_dir = os.path.join("data/dataset", dataset)
+        data_file = os.path.join(data_dir, "{}_train.json".format(dataset))
+        with open(data_file, "r", encoding="utf-8") as f:
+            all_texts = f.readlines()
+            for text in all_texts:
+                text = text.strip()
+                if text:
+                    sample = json.loads(text)
+                    doc_units = sample["doc_units"]
+                    doc_unit_labels = sample["doc_unit_labels"]
+                    corpus_name = dataset
+                    new_doc_unit_labels = []
+                    for label in doc_unit_labels:
+                        new_doc_unit_labels.append(label)
+
+                    new_sample = {}
+                    new_sample["dname"] = corpus_name
+                    new_sample["doc_units"] = doc_units
+                    new_sample["doc_unit_labels"] = new_doc_unit_labels
+                    all_merged_texts.append(new_sample)
+
+    with open(out_file, "w", encoding="utf-8") as f:
+        for text in all_merged_texts:
+            f.write("%s\n"%(json.dumps(text, ensure_ascii=False)))
+
+    return out_file

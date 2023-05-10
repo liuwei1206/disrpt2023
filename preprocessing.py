@@ -293,6 +293,7 @@ def preprocessing(tok_file, conllu_file, rel_file, output_file):
     all_doc_data = tok_reader(tok_file)
     all_conll_data = conll_reader(conllu_file)
     all_relation_data = rel_reader(rel_file)
+    dname = tok_file.split("/")[-1].split("_")[0].strip()
 
     assert len(all_doc_data) == len(all_conll_data), (len(all_doc_data), len(all_conll_data))
     # assert len(all_doc_data) == len(all_relation_data), (len(all_doc_data), len(all_relation_data))
@@ -398,6 +399,7 @@ def preprocessing(tok_file, conllu_file, rel_file, output_file):
         # save info json
         sample = {}
         sample["doc_id"] = doc_id
+        sample["dname"] = dname
         sample["doc_sents"] = doc_sent_tokens
         sample["doc_sent_token_features"] = doc_sent_token_features
         sample["doc_sent_token_labels"] = doc_sent_token_labels
@@ -635,6 +637,7 @@ def convert_all(data_folder_path):
         output_file_test = data_folder_path + names + "/" + names + "_test.json"
         if os.path.exists(test_tok_file):
             preprocessing(test_tok_file, test_conllu_file, test_rels_file, output_file_test)
+
 
 if __name__ == "__main__":
     # convert_all("data/dataset/")
