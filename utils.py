@@ -92,13 +92,10 @@ def rel_labels_from_file(file_name):
                 dname = sample["dname"]
                 doc_unit_labels = sample["doc_unit_labels"]
                 for l in doc_unit_labels:
-<<<<<<< HEAD
                     # labels.add(l.lower())
                     # label_frequency[l.lower()] += 1
-                    label_frequency[l] += 1
-=======
+                    # label_frequency[l] += 1
                     label_frequency[unify_rel_labels(l, dname)] += 1
->>>>>>> bd180aabcc885fefc17f09af97db1b2644b29076
     labels = []
     for key in label_frequency:
         if label_frequency[key] >= 0:
@@ -462,7 +459,7 @@ def merge_datasets(discourse_type="rst"):
         # we remove the zho.pdtb.cdtb because this corpus has no common labels with other corpus
         dataset_list = [
             "ita.pdtb.luna", "tur.pdtb.tdb",
-            "tha.pdtb.tdtb", "eng.pdt.pdtb"
+            "tha.pdtb.tdtb", "eng.pdtb.pdtb"
         ]
     elif discourse_type == "dep":
         dataset_list = ["eng.dep.scidtb", "zho.dep.scidtb"]

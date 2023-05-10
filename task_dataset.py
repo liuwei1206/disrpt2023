@@ -423,16 +423,8 @@ class RelDataset(Dataset):
                 doc_unit_labels = sample["doc_unit_labels"]
 
                 for unit_words, unit_label in zip(doc_units, doc_unit_labels):
-<<<<<<< HEAD
                     # unit_label = unit_label.lower()
-                    # print(unit_label)
-                    if unit_label not in self.label_dict:
-                        continue
-=======
                     unit_label = unify_rel_labels(unit_label, dname)
-                    # if unit_label not in self.label_dict:
-                    #     continue
->>>>>>> bd180aabcc885fefc17f09af97db1b2644b29076
                     unit1 = unit_words[0]
                     unit2 = unit_words[1]
 
@@ -463,6 +455,13 @@ class RelDataset(Dataset):
                     all_attention_mask.append(attention_mask)
                     all_token_type_ids.append(token_type_ids)
                     all_label_ids.append(label_id)
+        """
+        if len(all_input_ids) > 3000:
+            all_input_ids = all_input_ids[:200]
+            all_attention_mask = all_attention_mask[:200]
+            all_token_type_ids = all_token_type_ids[:200]
+            all_label_ids = all_label_ids[:200]
+        """
 
         self.input_ids = all_input_ids
         self.attention_mask = all_attention_mask

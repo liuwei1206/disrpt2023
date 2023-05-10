@@ -500,6 +500,7 @@ def convert_tur(conllu_file, rel_file, output_file):
     print("+++++++++++++++++++++++++++++++++++++++")
     all_relation_data = rel_reader(rel_file)
     print("+++++++++++++++++++++++++++++++++++++++++++++++++++")
+    dname = rel_file.split("/")[-1].split("_")[0].strip()
 
     assert len(all_doc_data) == len(all_conll_data), (len(all_doc_data), len(all_conll_data))
     # assert len(all_doc_data) == len(all_relation_data), (len(all_doc_data), len(all_relation_data))
@@ -595,6 +596,7 @@ def convert_tur(conllu_file, rel_file, output_file):
         # save info json
         sample = {}
         sample["doc_id"] = doc_id
+        sample["dname"] = dname 
         sample["doc_sents"] = doc_sent_tokens
         sample["doc_sent_token_features"] = doc_sent_token_features
         sample["doc_sent_token_labels"] = doc_sent_token_labels
@@ -662,13 +664,14 @@ if __name__ == "__main__":
     
     # """
     # zho
-    dataset = "zho.rst.sctb"
-    for mode in ["dev"]:
-        tok_file = "data/dataset/{}/{}_{}.tok".format(dataset, dataset, mode)
-        conll_file = "data/dataset/{}/{}_{}.conllu".format(dataset, dataset, mode)
-        rel_file = "data/dataset/{}/{}_{}.rels".format(dataset, dataset, mode)
-        out_file = "data/dataset/{}/{}_{}.json".format(dataset, dataset, mode)
-        preprocessing(tok_file, conll_file, rel_file, out_file)
+    dataset_list = ["eng.pdtb.tedm", "por.pdtb.crpc", "por.pdtb.tedm", "tur.pdtb.tedm"]
+    for dataset in dataset_list:
+        for mode in ["dev", "test"]:
+            tok_file = "data/dataset/{}/{}_{}.tok".format(dataset, dataset, mode)
+            conll_file = "data/dataset/{}/{}_{}.conllu".format(dataset, dataset, mode)
+            rel_file = "data/dataset/{}/{}_{}.rels".format(dataset, dataset, mode)
+            out_file = "data/dataset/{}/{}_{}.json".format(dataset, dataset, mode)
+            preprocessing(tok_file, conll_file, rel_file, out_file)
 
     # """
     # This part of code is for generating one dataset's fasttext embedding, everytime when you want to

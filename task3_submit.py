@@ -180,11 +180,11 @@ def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_da
         if best_dev_acc < dev_score_dict["acc_score"]:
             best_dev_acc = dev_score_dict["acc_score"]
             best_dev_epoch = epoch
-        # print(" Dev: Epoch=%d, Acc=%.4f\n" % (epoch, dev_score_dict["acc_score"]))
-        # print(" Test: Epoch=%d, Acc=%.4f\n" % (epoch, test_score_dict["acc_score"]))
+        print(" Dev: Epoch=%d, Acc=%.4f\n" % (epoch, dev_score_dict["acc_score"]))
+        print(" Test: Epoch=%d, Acc=%.4f\n" % (epoch, test_score_dict["acc_score"]))
         # output_dir = os.path.join(args.output_dir, TIME_CHECKPOINT_DIR)
         # output_dir = os.path.join(output_dir, f"{PREFIX_CHECKPOINT_DIR}_{epoch}")
-        output_dir = os.path.join(args.output_dir, "checkpoint_{}".format(epoch))
+        # output_dir = os.path.join(args.output_dir, "checkpoint_{}".format(epoch))
         # os.makedirs(output_dir, exist_ok=True)
         # torch.save(model.state_dict(), os.path.join(output_dir, "pytorch_model.bin"))
 
@@ -226,7 +226,7 @@ def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=F
             all_pred_ids = np.append(all_pred_ids, pred_ids)
 
     ## evaluation
-    """
+    # """
     if desc == "train":
         gold_file = args.train_data_file.replace(".json", ".rels")
     elif desc == "dev":
@@ -235,12 +235,12 @@ def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=F
         gold_file = args.test_data_file.replace(".json", ".rels")
     pred_file = rel_preds_to_file(all_pred_ids, args.label_list, gold_file)
     score_dict = get_accuracy_score(gold_file, pred_file)
+    # """
     """
-
     acc = accuracy_score(y_true=all_label_ids, y_pred=all_pred_ids)
     f1 = f1_score(y_true=all_label_ids, y_pred=all_pred_ids, average="macro")
     score_dict = {"acc_score": acc, "f1_score": f1}
-
+    """
     return score_dict
 
 
@@ -257,6 +257,7 @@ def main():
     set_seed(args.seed)
 
     # 1. prepare pretrained path
+    """
     rel_config = json.load(open("data/config/rel_config.json"))
     encoder_type = rel_config[args.dataset]["encoder_type"]
     pretrained_path = rel_config[args.dataset]["pretrained_path"]
@@ -267,31 +268,47 @@ def main():
     print(pretrained_path)
     args.encoder_type = encoder_type
     args.pretrained_path = pretrained_path
+    """
 
     # 2.prepare data
     data_dir = os.path.join(args.data_dir, args.dataset)
     args.data_dir = data_dir
-    if dataset in [
+    rel_config = json.load(open("data/config/rel_config.json"))
+    if args.dataset in [
         "deu.rst.pcc", "fas.rst.prstc", "nld.rst.nldt", "por.rst.cstn",
         "rus.rst.rrt", "spa.rst.sctb", "zho.rst.sctb", "zho.dep.scitb",
         "eng.dep.scitb", "tur.pdtb.tdb", "tha.pdtb.tdtb"
     ]:
         print("Training a multi-linguistic model.......")
-        discourse_type = dataset.split(".")[1]
-        train_file = merge_datasets(discourse_type)
+        discourse_type = args.dataset.split(".")[1]
+        train_data_file = merge_datasets(discourse_type)
+        config_dataset = "super.{}".format(discourse_type)
+        encoder_type = rel_config[config_dataset]["encoder_type"]
         output_dir = os.path.join(args.output_dir, "super.{}".format(discourse_type))
-        output_dir = os.path.join(output_dir, "{}+{}".format(args.model_type, args.encoder_type))
+        output_dir = os.path.join(output_dir, "{}+{}".format(args.model_type, encoder_type))
     else:
         print("Training a mono-linguistic model.......")
         train_data_file = os.path.join(data_dir, "{}_train.json".format(args.dataset))
+        config_dataset = args.dataset
+        encoder_type = rel_config[config_dataset]["encoder_type"]        
         output_dir = os.path.join(args.output_dir, args.dataset)
-        output_dir = os.path.join(output_dir, "{}+{}".format(args.model_type, args.encoder_type))
+        output_dir = os.path.join(output_dir, "{}+{}".format(args.model_type, encoder_type))
     dev_data_file = os.path.join(data_dir, "{}_dev.json".format(args.dataset))
     test_data_file = os.path.join(data_dir, "{}_test.json".format(args.dataset))
     label_dict, label_list = rel_labels_from_file(train_data_file)
     args.train_data_file, args.dev_data_file, args.test_data_file = train_data_file, dev_data_file, test_data_file
     args.label_dict, args.label_list, args.num_labels = label_dict, label_list, len(label_list)
     args.output_dir = output_dir
+
+    # 1. prepare pretrained path
+    pretrained_path = rel_config[config_dataset]["pretrained_path"]
+    args.learning_rate = rel_config[config_dataset]["lr"]
+    args.train_batch_size = rel_config[config_dataset]["batch_size"]
+    print(" encoder: {}, lr: {}, batch: {}".format(encoder_type, args.learning_rate, args.train_batch_size))
+    pretrained_path = os.path.join("/hits/basement/nlp/liuwi/resources/pretrained_models", pretrained_path)
+    print(pretrained_path)
+    args.encoder_type = encoder_type
+    args.pretrained_path = pretrained_path
 
     # 3.define models
     if args.model_type.lower() == "base":
