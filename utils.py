@@ -428,3 +428,65 @@ def merge_datasets(dataset_list, mode="rst"):
     with open(out_file, "w", encoding="utf-8") as f:
         for text in all_merged_texts:
             f.write("%s\n"%(json.dumps(text, ensure_ascii=False)))
+
+
+def merge_datasets(discourse_type="rst"):
+    """
+    merge a group of corpus for training
+    Args:
+        dataset_list: corpus list
+        mode:
+    """
+    out_dir = os.path.join("data/dataset", "super.{}".format(discourse_type))
+    os.makedirs(out_dir, exist_ok=True)
+    out_file = os.path.join(out_dir, "super.{}_train.json".format(discourse_type))
+
+    if os.path.exists(out_file):
+        return out_file
+
+    if discourse_type == "rst":
+        # we remove the zho.rst.gcdt because this corpus has no overlaping labels with other corpus
+        dataset_list = [
+            "deu.rst.pcc", "eng.rst.gum", "eng.rst.rstdt",
+            "eus.rst.ert", "fas.rst.prstc", "nld.rst.nldt",
+            "por.rst.cstn", "rus.rst.rrt", "spa.rst.rststb",
+            "spa.rst.sctb","zho.rst.sctb"
+        ]
+    elif discourse_type == "pdtb":
+        # we remove the zho.pdtb.cdtb because this corpus has no common labels with other corpus
+        dataset_list = [
+            "ita.pdtb.luna", "tur.pdtb.tdb",
+            "tha.pdtb.tdtb", "eng.pdt.pdtb"
+        ]
+    elif discourse_type == "dep":
+        dataset_list = ["eng.dep.scidtb", "zho.dep.scidtb"]
+    elif discourse_type == "sdrt":
+        dataset_list = ["eng.sdrt.stac", "fra.sdrt.annodis"]
+    all_merged_texts = []
+    for dataset in dataset_list:
+        data_dir = os.path.join("data/dataset", dataset)
+        data_file = os.path.join(data_dir, "{}_train.json".format(dataset))
+        with open(data_file, "r", encoding="utf-8") as f:
+            all_texts = f.readlines()
+            for text in all_texts:
+                text = text.strip()
+                if text:
+                    sample = json.loads(text)
+                    doc_units = sample["doc_units"]
+                    doc_unit_labels = sample["doc_unit_labels"]
+                    corpus_name = dataset
+                    new_doc_unit_labels = []
+                    for label in doc_unit_labels:
+                        new_doc_unit_labels.append(label)
+
+                    new_sample = {}
+                    new_sample["dname"] = corpus_name
+                    new_sample["doc_units"] = doc_units
+                    new_sample["doc_unit_labels"] = new_doc_unit_labels
+                    all_merged_texts.append(new_sample)
+
+    with open(out_file, "w", encoding="utf-8") as f:
+        for text in all_merged_texts:
+            f.write("%s\n"%(json.dumps(text, ensure_ascii=False)))
+
+    return out_file
