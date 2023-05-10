@@ -179,16 +179,16 @@ def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_da
             print("\nTrain: Epoch=%d, Acc=%.4f, F1=%.4f\n" % (epoch, score_dict["acc_score"], score_dict["f1_score"]))
         if dev_dataloader is not None:
             score_dict = evaluate(model, args, dev_dataloader, tokenizer, epoch, desc="dev")
-            if best_dev < score_dict["acc_score"] + score_dict["f1_score"]:
-                best_dev = score_dict["acc_score"] + score_dict["f1_score"]
+            if best_dev < score_dict["acc_score"]:
+                best_dev = score_dict["acc_score"] #  + score_dict["f1_score"]
             print("\nDev: Epoch=%d, Acc=%.4f, F1=%.4f\n" % (epoch, score_dict["acc_score"], score_dict["f1_score"]))
         if test_dataloader is not None:
             score_dict = evaluate(model, args, test_dataloader, tokenizer, epoch, desc="test")
             print("\nTest: Epoch=%d, Acc=%.4f, F1=%.4f\n" % (epoch, score_dict["acc_score"], score_dict["f1_score"]))
         output_dir = os.path.join(args.output_dir, TIME_CHECKPOINT_DIR)
         output_dir = os.path.join(output_dir, f"{PREFIX_CHECKPOINT_DIR}_{epoch}")
-        os.makedirs(output_dir, exist_ok=True)
-        torch.save(model.state_dict(), os.path.join(output_dir, "pytorch_model.bin"))
+        # os.makedirs(output_dir, exist_ok=True)
+        # torch.save(model.state_dict(), os.path.join(output_dir, "pytorch_model.bin"))
     print("Best Acc on dev: %.4f\n"%(best_dev))
 
 
@@ -368,43 +368,47 @@ def main():
         temp_file = os.path.join(temp_dir, "checkpoint_{}/pytorch_model.bin")
         if args.do_dev:
             ## rst
-            dev_data_file = "data/dataset/eng.rst.gum/eng.rst.gum_dev.json"
-            dev_data_file = "data/dataset/eng.rst.rstdt/eng.rst.rstdt_dev.json"
-            dev_data_file = "data/dataset/eus.rst.ert/eus.rst.ert_dev.json"
-            dev_data_file = "data/dataset/fas.rst.prstc/fas.rst.prstc_dev.json"
-            dev_data_file = "data/dataset/nld.rst.nldt/nld.rst.nldt_dev.json"
-            dev_data_file = "data/dataset/por.rst.cstn/por.rst.cstn_dev.json"
-            dev_data_file = "data/dataset/rus.rst.rrt/rus.rst.rrt_dev.json"
-            dev_data_file = "data/dataset/spa.rst.rststb/spa.rst.rststb_dev.json"
-            dev_data_file = "data/dataset/spa.rst.sctb/spa.rst.sctb_dev.json"
-            dev_data_file = "data/dataset/zho.rst.sctb/zho.rst.sctb_dev.json" 
+            # dev_data_file = "data/dataset/eng.rst.gum/eng.rst.gum_dev.json"
+            # dev_data_file = "data/dataset/eng.rst.rstdt/eng.rst.rstdt_dev.json"
+            # dev_data_file = "data/dataset/eus.rst.ert/eus.rst.ert_dev.json"
+            # dev_data_file = "data/dataset/fas.rst.prstc/fas.rst.prstc_dev.json"
+            # dev_data_file = "data/dataset/nld.rst.nldt/nld.rst.nldt_dev.json"
+            # dev_data_file = "data/dataset/por.rst.cstn/por.rst.cstn_dev.json"
+            # dev_data_file = "data/dataset/rus.rst.rrt/rus.rst.rrt_dev.json"
+            # dev_data_file = "data/dataset/spa.rst.rststb/spa.rst.rststb_dev.json"
+            # dev_data_file = "data/dataset/spa.rst.sctb/spa.rst.sctb_dev.json"
+            # dev_data_file = "data/dataset/zho.rst.sctb/zho.rst.sctb_dev.json" 
             ## dep
             # dev_data_file = "data/dataset/eng.dep.scidtb/eng.dep.scidtb_dev.json"
             ## pdtb
             # dev_data_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_dev.json"
             # dev_data_file = "data/dataset/tha.pdtb.tdtb/tha.pdtb.tdtb_dev.json"
             # dev_data_file = "data/dataset/eng.pdtb.pdtb/eng.pdtb.pdtb_dev.json"
+            ## sdrt
+            dev_data_file = "data/dataset/eng.sdrt.stac/eng.sdrt.stac_dev.json"
             print(dev_data_file)
             dev_dataset = MyDataset(dev_data_file, params=dataset_params)
             dev_dataloader = get_dataloader(dev_dataset, args, mode="dev")
         if args.do_test:
             ## rst
-            test_data_file = "data/dataset/eng.rst.gum/eng.rst.gum_test.json"
-            test_data_file = "data/dataset/eng.rst.rstdt/eng.rst.rstdt_test.json"
-            test_data_file = "data/dataset/eus.rst.ert/eus.rst.ert_test.json"
-            test_data_file = "data/dataset/fas.rst.prstc/fas.rst.prstc_test.json"
-            test_data_file = "data/dataset/nld.rst.nldt/nld.rst.nldt_test.json"
-            test_data_file = "data/dataset/por.rst.cstn/por.rst.cstn_test.json"
-            test_data_file = "data/dataset/rus.rst.rrt/rus.rst.rrt_test.json"
-            test_data_file = "data/dataset/spa.rst.rststb/spa.rst.rststb_test.json"
-            test_data_file = "data/dataset/spa.rst.sctb/spa.rst.sctb_test.json"
-            test_data_file = "data/dataset/zho.rst.sctb/zho.rst.sctb_test.json"
+            # test_data_file = "data/dataset/eng.rst.gum/eng.rst.gum_test.json"
+            # test_data_file = "data/dataset/eng.rst.rstdt/eng.rst.rstdt_test.json"
+            # test_data_file = "data/dataset/eus.rst.ert/eus.rst.ert_test.json"
+            # test_data_file = "data/dataset/fas.rst.prstc/fas.rst.prstc_test.json"
+            # test_data_file = "data/dataset/nld.rst.nldt/nld.rst.nldt_test.json"
+            # test_data_file = "data/dataset/por.rst.cstn/por.rst.cstn_test.json"
+            # test_data_file = "data/dataset/rus.rst.rrt/rus.rst.rrt_test.json"
+            # test_data_file = "data/dataset/spa.rst.rststb/spa.rst.rststb_test.json"
+            # test_data_file = "data/dataset/spa.rst.sctb/spa.rst.sctb_test.json"
+            # test_data_file = "data/dataset/zho.rst.sctb/zho.rst.sctb_test.json"
             ## dep
             # test_data_file = "data/dataset/eng.dep.scidtb/eng.dep.scidtb_test.json"
             ## pdtb
             # test_data_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_test.json"
             # test_data_file = "data/dataset/tha.pdtb.tdtb/tha.pdtb.tdtb_test.json"
             # test_data_file = "data/dataset/eng.pdtb.pdtb/eng.pdtb.pdtb_test.json"
+            ## sdrt
+            test_data_file = "data/dataset/eng.sdrt.stac/eng.sdrt.stac_test.json"
             test_dataset = MyDataset(test_data_file, params=dataset_params)
             test_dataloader = get_dataloader(test_dataset, args, mode="test")
 
