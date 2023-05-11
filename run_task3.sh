@@ -8,8 +8,7 @@
 # <<"COMMENT"
 python3 task3.py --do_dev --do_test \
                  --model_type="base" \
-                 --dataset="super.pdtb" \
-                 --feature_size=0 \
+                 --dataset="super.rst" \
                  --max_seq_length=256 \
                  # --train_batch_size=16 \
                  # --learning_rate=1e-4 \

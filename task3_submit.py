@@ -182,8 +182,8 @@ def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_da
             best_dev_epoch = epoch
         print(" Dev: Epoch=%d, Acc=%.4f\n" % (epoch, dev_score_dict["acc_score"]))
         print(" Test: Epoch=%d, Acc=%.4f\n" % (epoch, test_score_dict["acc_score"]))
-        # output_dir = os.path.join(args.output_dir, TIME_CHECKPOINT_DIR)
-        # output_dir = os.path.join(output_dir, f"{PREFIX_CHECKPOINT_DIR}_{epoch}")
+        output_dir = os.path.join(args.output_dir, "large_adv_real")
+        output_dir = os.path.join(output_dir, f"{PREFIX_CHECKPOINT_DIR}_{epoch}")
         # output_dir = os.path.join(args.output_dir, "checkpoint_{}".format(epoch))
         # os.makedirs(output_dir, exist_ok=True)
         # torch.save(model.state_dict(), os.path.join(output_dir, "pytorch_model.bin"))
@@ -226,7 +226,7 @@ def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=F
             all_pred_ids = np.append(all_pred_ids, pred_ids)
 
     ## evaluation
-    # """
+    """
     if desc == "train":
         gold_file = args.train_data_file.replace(".json", ".rels")
     elif desc == "dev":
@@ -235,12 +235,12 @@ def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=F
         gold_file = args.test_data_file.replace(".json", ".rels")
     pred_file = rel_preds_to_file(all_pred_ids, args.label_list, gold_file)
     score_dict = get_accuracy_score(gold_file, pred_file)
-    # """
     """
+    # """
     acc = accuracy_score(y_true=all_label_ids, y_pred=all_pred_ids)
     f1 = f1_score(y_true=all_label_ids, y_pred=all_pred_ids, average="macro")
     score_dict = {"acc_score": acc, "f1_score": f1}
-    """
+    # """
     return score_dict
 
 

@@ -348,7 +348,7 @@ def main():
             # dev_data_file = "data/dataset/rus.rst.rrt/rus.rst.rrt_dev.json"
             # dev_data_file = "data/dataset/spa.rst.rststb/spa.rst.rststb_dev.json"
             # dev_data_file = "data/dataset/spa.rst.sctb/spa.rst.sctb_dev.json"
-            # dev_data_file = "data/dataset/zho.rst.sctb/zho.rst.sctb_dev.json" 
+            dev_data_file = "data/dataset/zho.rst.sctb/zho.rst.sctb_dev.json" 
             ## dep
             # dev_data_file = "data/dataset/eng.dep.scidtb/eng.dep.scidtb_dev.json"
             # dev_data_file = "data/dataset/eng.dep.covdtb/eng.dep.covdtb_dev.json"
@@ -375,7 +375,7 @@ def main():
             # test_data_file = "data/dataset/rus.rst.rrt/rus.rst.rrt_test.json"
             # test_data_file = "data/dataset/spa.rst.rststb/spa.rst.rststb_test.json"
             # test_data_file = "data/dataset/spa.rst.sctb/spa.rst.sctb_test.json"
-            # test_data_file = "data/dataset/zho.rst.sctb/zho.rst.sctb_test.json"
+            test_data_file = "data/dataset/zho.rst.sctb/zho.rst.sctb_test.json"
             ## dep
             # test_data_file = "data/dataset/eng.dep.scidtb/eng.dep.scidtb_test.json"
             # test_data_file = "data/dataset/eng.dep.covdtb/eng.dep.covdtb_test.json"
@@ -391,7 +391,7 @@ def main():
             test_dataset = MyDataset(test_data_file, params=dataset_params)
             test_dataloader = get_dataloader(test_dataset, args, mode="test")
 
-        for epoch in range(3, args.num_train_epochs+1):
+        for epoch in range(1, args.num_train_epochs+1):
             checkpoint_file = temp_file.format(str(epoch))
             print(" Epoch: {}".format(str(epoch)))
             print(checkpoint_file)

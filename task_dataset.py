@@ -455,13 +455,13 @@ class RelDataset(Dataset):
                     all_attention_mask.append(attention_mask)
                     all_token_type_ids.append(token_type_ids)
                     all_label_ids.append(label_id)
-        """
-        if len(all_input_ids) > 3000:
-            all_input_ids = all_input_ids[:200]
-            all_attention_mask = all_attention_mask[:200]
-            all_token_type_ids = all_token_type_ids[:200]
-            all_label_ids = all_label_ids[:200]
-        """
+        # """
+        if len(all_input_ids) > 2000:
+            all_input_ids = all_input_ids[:2000]
+            all_attention_mask = all_attention_mask[:2000]
+            all_token_type_ids = all_token_type_ids[:2000]
+            all_label_ids = all_label_ids[:2000]
+        # """
 
         self.input_ids = all_input_ids
         self.attention_mask = all_attention_mask
