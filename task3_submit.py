@@ -196,6 +196,7 @@ def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=F
     all_input_ids = None
     all_attention_mask = None
     all_label_ids = None
+    all_label_index_ids = None
     all_pred_ids = None
     for batch in tqdm(dataloader, desc=desc):
         batch = tuple(t.to(args.device) for t in batch)
@@ -213,25 +214,27 @@ def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=F
         input_ids = batch[0].detach().cpu().numpy()
         attention_mask = batch[1].detach().cpu().numpy()
         label_ids = batch[3].detach().cpu().numpy()
+        label_index_ids = batch[4].detach().cpu().numpy()
         pred_ids = preds.detach().cpu().numpy()
 
         if all_input_ids is None:
             all_input_ids = input_ids
             all_attention_mask = attention_mask
             all_label_ids = label_ids
+            all_label_index_ids = label_index_ids
             all_pred_ids = pred_ids
         else:
             all_input_ids = np.append(all_input_ids, input_ids, axis=0)
             all_attention_mask = np.append(all_attention_mask, attention_mask, axis=0)
             all_label_ids = np.append(all_label_ids, label_ids)
+            all_label_index_ids = np.append(all_label_index_ids, label_index_ids)
             all_pred_ids = np.append(all_pred_ids, pred_ids)
 
     ## evaluation
-    # labels_20 = [args.label_list[idx] for idx in all_label_ids[:20]]
-    # labels_400 = [args.label_list[idx] for idx in all_label_ids[100:120]]
-    # print(labels_20)
-    # print(labels_400)
-    # print("Id num: ", len(all_label_ids))
+    # reorder labels with indexes. We do so to align the labels with gold_file
+    all_label_ids = all_label_ids[all_label_index_ids]
+    all_pred_ids = all_pred_ids[all_label_index_ids]
+
     """
     if desc == "train":
         gold_file = args.train_data_file.replace(".json", ".rels")

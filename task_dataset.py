@@ -412,6 +412,7 @@ class RelDataset(Dataset):
         all_attention_mask = []
         all_token_type_ids = []
         all_label_ids = []
+        all_label_index_ids = []
         label_frequency = defaultdict(int)
 
         for text in all_texts:
@@ -422,8 +423,10 @@ class RelDataset(Dataset):
                 doc_units = sample["doc_units"]
                 doc_unit_labels = sample["doc_unit_labels"]
 
-                for unit_words, unit_label in zip(doc_units, doc_unit_labels):
+                for unit_words, label_info in zip(doc_units, doc_unit_labels):
                     # unit_label = unit_label.lower()
+                    unit_label = label_info[0]
+                    label_index_id = label_info[1]
                     unit_label = unify_rel_labels(unit_label, dname)
                     unit1 = unit_words[0]
                     unit2 = unit_words[1]
@@ -455,6 +458,7 @@ class RelDataset(Dataset):
                     all_attention_mask.append(attention_mask)
                     all_token_type_ids.append(token_type_ids)
                     all_label_ids.append(label_id)
+                    all_label_index_ids.append(label_index_id)
         """
         if len(all_input_ids) > 2000:
             all_input_ids = all_input_ids[:2000]
@@ -467,6 +471,7 @@ class RelDataset(Dataset):
         self.attention_mask = all_attention_mask
         self.token_type_ids = all_token_type_ids
         self.label_ids = np.array(all_label_ids)
+        self.label_index_ids = np.array(all_label_index_ids)
         # print(all_label_ids)
         print(label_frequency)
         self.total_size = len(all_input_ids)
@@ -480,6 +485,7 @@ class RelDataset(Dataset):
             self.attention_mask[index],
             self.token_type_ids[index],
             torch.tensor(self.label_ids[index]),
+            torch.tensor(self.label_index_ids[index]),
         )
 
 
