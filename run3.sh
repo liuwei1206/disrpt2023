@@ -6,9 +6,9 @@
 ## eval only
 # eng.dep.covdtb, eng.pdtb.tedm, por.pdtb.tedm, tur.pdtb.tedm
 # <<"COMMENT"
-python3 task3_submit.py --do_dev --do_test \
+python3 task3_submit.py --do_dev --do_test --do_adv\
                         --model_type="base" \
-                        --dataset="eng.pdtb.pdtb" \
+                        --dataset="eng.dep.covdtb" \
                         --max_seq_length=256 \
                         # --train_batch_size=16 \
                         # --learning_rate=1e-4 \

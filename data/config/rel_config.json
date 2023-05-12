@@ -36,9 +36,9 @@
 	},
 	"eng.sdrt.stac": {
 		"encoder_type": "roberta",
-		"pretrained_path": "roberta-base",
+		"pretrained_path": "roberta-large",
                 "lr": 1e-5,
-                "batch_size": 16,
+                "batch_size": 12,
 		"flag": "train_and_test"
 	},
 	"eus.rst.ert": {
@@ -122,7 +122,7 @@
 		"encoder_type": "bert",
 		"pretrained_path": "hfl/chinese-macbert-large",
 		"lr": 3e-5,
-		"batch_size": 12,
+		"batch_size": 16,
 		"flag": "train_and_test"
 	},
 	"zho.rst.gcdt": {
@@ -130,7 +130,7 @@
 		"pretrained_path": "hfl/chinese-macbert-large",
 		"flag": "train_and_test",
 		"lr": 3e-5,
-		"batch_size": 12
+		"batch_size": 16
 	},
 	"zho.rst.sctb": {
 		"encoder_type": "bert",

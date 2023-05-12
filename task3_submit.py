@@ -179,12 +179,11 @@ def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_da
         epoch_res_list.append((dev_score_dict["acc_score"], test_score_dict["acc_score"]))
         print(" Dev: Epoch=%d, Acc=%.4f\n" % (epoch, dev_score_dict["acc_score"]))
         print(" Test: Epoch=%d, Acc=%.4f\n" % (epoch, test_score_dict["acc_score"]))
-        # output_dir = os.path.join(args.output_dir, "large_adv_real")
-        output_dir = os.path.join(args.output_dir, "large")
-        output_dir = os.path.join(output_dir, f"{PREFIX_CHECKPOINT_DIR}_{epoch}")
-        # output_dir = os.path.join(args.output_dir, "checkpoint_{}".format(epoch))
-        # os.makedirs(output_dir, exist_ok=True)
-        # torch.save(model.state_dict(), os.path.join(output_dir, "pytorch_model.bin"))
+        # output_dir = os.path.join(args.output_dir, "large")
+        # output_dir = os.path.join(output_dir, f"{PREFIX_CHECKPOINT_DIR}_{epoch}")
+        output_dir = os.path.join(args.output_dir, "checkpoint_{}".format(epoch))
+        os.makedirs(output_dir, exist_ok=True)
+        torch.save(model.state_dict(), os.path.join(output_dir, "pytorch_model.bin"))
     epoch_res_list = sorted(epoch_res_list, key=lambda x: (x[0], x[1]), reverse=True)
 
     return epoch_res_list[0]
@@ -289,8 +288,8 @@ def main():
     rel_config = json.load(open("data/config/rel_config.json"))
     if args.dataset in [
         "deu.rst.pcc", "fas.rst.prstc", "nld.rst.nldt", "por.rst.cstn",
-        "rus.rst.rrt", "spa.rst.sctb", "zho.rst.sctb", "zho.dep.scitb",
-        "eng.dep.scitb", "tur.pdtb.tdb", "tha.pdtb.tdtb",
+        "rus.rst.rrt", "spa.rst.sctb", "zho.rst.sctb", "zho.dep.scidtb",
+        "eng.dep.scidtb", "eng.dep.covdtb", "tur.pdtb.tdb", "tha.pdtb.tdtb", 
         "ita.pdtb.luna", "eng.pdtb.pdtb"
     ]:
         print("Training a multi-linguistic model.......")
@@ -312,6 +311,10 @@ def main():
     label_dict, label_list = rel_labels_from_file(train_data_file)
     args.train_data_file, args.dev_data_file, args.test_data_file = train_data_file, dev_data_file, test_data_file
     args.label_dict, args.label_list, args.num_labels = label_dict, label_list, len(label_list)
+    if args.do_adv:
+        output_dir = os.path.join(output_dir, "model_adv")
+    else:
+        output_dir = os.path.join(output_dir, "model")
     args.output_dir = output_dir
 
     # 1. prepare pretrained path
@@ -390,7 +393,7 @@ def main():
         dev_dataloader = get_dataloader(dev_dataset, args, mode="dev")
         test_dataset = MyDataset(test_data_file, params=dataset_params)
         test_dataloader = get_dataloader(test_dataset, args, mode="test")
-        template_file = os.path.join(args.output_dir, "large/checkpoint_{}/pytorch_model.bin")
+        template_file = os.path.join(args.output_dir, "checkpoint_{}/pytorch_model.bin")
         epoch_res_list = []
         for epoch in range(1, args.num_train_epochs+1):
             checkpoint_file = template_file.format(str(epoch))

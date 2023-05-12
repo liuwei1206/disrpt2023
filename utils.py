@@ -105,7 +105,7 @@ def rel_labels_from_file(file_name):
         if label_frequency[key] >= 0:
             labels.append(key)
     # labels = list(labels)
-    labels = sorted(labels)
+    labels = sorted(labels, key=lambda x: x.upper())
     label_dict = {l: idx for idx, l in enumerate(labels)}
     print(labels)
     print(label_dict)
