@@ -31,7 +31,7 @@
 		"encoder_type": "roberta",
 		"pretrained_path": "roberta-large",
                 "lr": 1e-5,
-                "batch_size": 12,
+                "batch_size": 16,
 		"flag": "train_and_test"
 	},
 	"eng.sdrt.stac": {

@@ -182,11 +182,12 @@ def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_da
             best_dev_epoch = epoch
         print(" Dev: Epoch=%d, Acc=%.4f\n" % (epoch, dev_score_dict["acc_score"]))
         print(" Test: Epoch=%d, Acc=%.4f\n" % (epoch, test_score_dict["acc_score"]))
-        output_dir = os.path.join(args.output_dir, "large_adv_real")
+        # output_dir = os.path.join(args.output_dir, "large_adv_real")
+        output_dir = os.path.join(args.output_dir, "large")
         output_dir = os.path.join(output_dir, f"{PREFIX_CHECKPOINT_DIR}_{epoch}")
         # output_dir = os.path.join(args.output_dir, "checkpoint_{}".format(epoch))
-        # os.makedirs(output_dir, exist_ok=True)
-        # torch.save(model.state_dict(), os.path.join(output_dir, "pytorch_model.bin"))
+        os.makedirs(output_dir, exist_ok=True)
+        torch.save(model.state_dict(), os.path.join(output_dir, "pytorch_model.bin"))
 
     return epoch_res_list[best_dev_epoch-1]
 
@@ -226,6 +227,11 @@ def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=F
             all_pred_ids = np.append(all_pred_ids, pred_ids)
 
     ## evaluation
+    # labels_20 = [args.label_list[idx] for idx in all_label_ids[:20]]
+    # labels_400 = [args.label_list[idx] for idx in all_label_ids[100:120]]
+    # print(labels_20)
+    # print(labels_400)
+    # print("Id num: ", len(all_label_ids))
     """
     if desc == "train":
         gold_file = args.train_data_file.replace(".json", ".rels")

@@ -77,7 +77,10 @@ def rel_label_to_original(label, corpus_name):
     if corpus_name == "eng.dep.covdtb":
         return label.upper()
     elif corpus_name == "eng.sdrt.stac":
-        return label.capitalize()
+        if label == "q_elab":
+            return "Q_Elab"
+        else:
+            return label.capitalize()
     else:
         return label
 
@@ -103,6 +106,7 @@ def rel_labels_from_file(file_name):
     # labels = list(labels)
     labels = sorted(labels)
     label_dict = {l: idx for idx, l in enumerate(labels)}
+    print(labels)
     print(label_dict)
     print(" Total label number: %d\n"%(len(labels)))
 
@@ -256,8 +260,11 @@ def generate_ft_dict(train_file_path, dev_file_path, test_file_path, output_path
 
 def rel_preds_to_file(pred_ids, label_list, gold_file):
     dname = gold_file.split("/")[-1].split("_")[0].strip()
-    pred_labels = [label_list[id] for id in pred_ids]
+    # print(dname, label_list, gold_file)
+    pred_labels = [label_list[idx] for idx in pred_ids]
+    # print(pred_labels[:10])
     pred_labels = [rel_label_to_original(label, dname) for label in pred_labels]
+    # print(pred_labels[:10])
     valid_lines = []
     with open(gold_file, "r", encoding="utf-8") as f:
         lines = f.readlines()
