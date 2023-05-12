@@ -177,19 +177,17 @@ def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_da
         dev_score_dict = evaluate(model, args, dev_dataloader, tokenizer, epoch, desc="dev")
         test_score_dict = evaluate(model, args, test_dataloader, tokenizer, epoch, desc="test")
         epoch_res_list.append((dev_score_dict["acc_score"], test_score_dict["acc_score"]))
-        if best_dev_acc < dev_score_dict["acc_score"]:
-            best_dev_acc = dev_score_dict["acc_score"]
-            best_dev_epoch = epoch
         print(" Dev: Epoch=%d, Acc=%.4f\n" % (epoch, dev_score_dict["acc_score"]))
         print(" Test: Epoch=%d, Acc=%.4f\n" % (epoch, test_score_dict["acc_score"]))
         # output_dir = os.path.join(args.output_dir, "large_adv_real")
         output_dir = os.path.join(args.output_dir, "large")
         output_dir = os.path.join(output_dir, f"{PREFIX_CHECKPOINT_DIR}_{epoch}")
         # output_dir = os.path.join(args.output_dir, "checkpoint_{}".format(epoch))
-        os.makedirs(output_dir, exist_ok=True)
-        torch.save(model.state_dict(), os.path.join(output_dir, "pytorch_model.bin"))
+        # os.makedirs(output_dir, exist_ok=True)
+        # torch.save(model.state_dict(), os.path.join(output_dir, "pytorch_model.bin"))
+    epoch_res_list = sorted(epoch_res_list, key=lambda x: (x[0], x[1]), reverse=True)
 
-    return epoch_res_list[best_dev_epoch-1]
+    return epoch_res_list[0]
 
 
 def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=False):
@@ -232,10 +230,16 @@ def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=F
 
     ## evaluation
     # reorder labels with indexes. We do so to align the labels with gold_file
-    all_label_ids = all_label_ids[all_label_index_ids]
-    all_pred_ids = all_pred_ids[all_label_index_ids]
-
-    """
+    pred_dict = {index:idx for index, idx in zip(all_label_index_ids, all_pred_ids)}
+    label_dict = {index:idx for index, idx in zip(all_label_index_ids, all_label_ids)}
+    reorder_pred_ids = []
+    reorder_label_ids = []
+    for idx in range(len(all_label_ids)):
+        reorder_pred_ids.append(pred_dict[idx])
+        reorder_label_ids.append(label_dict[idx])
+    all_label_ids = np.array(reorder_label_ids)
+    all_pred_ids = np.array(reorder_pred_ids)
+    # """
     if desc == "train":
         gold_file = args.train_data_file.replace(".json", ".rels")
     elif desc == "dev":
@@ -244,12 +248,12 @@ def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=F
         gold_file = args.test_data_file.replace(".json", ".rels")
     pred_file = rel_preds_to_file(all_pred_ids, args.label_list, gold_file)
     score_dict = get_accuracy_score(gold_file, pred_file)
-    """
     # """
+    """
     acc = accuracy_score(y_true=all_label_ids, y_pred=all_pred_ids)
     f1 = f1_score(y_true=all_label_ids, y_pred=all_pred_ids, average="macro")
     score_dict = {"acc_score": acc, "f1_score": f1}
-    # """
+    """
     return score_dict
 
 
@@ -286,7 +290,8 @@ def main():
     if args.dataset in [
         "deu.rst.pcc", "fas.rst.prstc", "nld.rst.nldt", "por.rst.cstn",
         "rus.rst.rrt", "spa.rst.sctb", "zho.rst.sctb", "zho.dep.scitb",
-        "eng.dep.scitb", "tur.pdtb.tdb", "tha.pdtb.tdtb"
+        "eng.dep.scitb", "tur.pdtb.tdb", "tha.pdtb.tdtb",
+        "ita.pdtb.luna", "eng.pdtb.pdtb"
     ]:
         print("Training a multi-linguistic model.......")
         discourse_type = args.dataset.split(".")[1]
@@ -373,7 +378,7 @@ def main():
                     dev_score_dict = evaluate(model, args, dev_dataloader, tokenizer, epoch, desc="dev")
                     test_score_dict = evaluate(model, args, test_dataloader, tokenizer, epoch, desc="dev")
                     epoch_res_list.append((dev_score_dict["acc_score"], test_score_dict["acc_score"]))
-            epoch_res_list = sorted(epoch_res_list.items(), key=lambda x:x[0], reverse=True)
+            epoch_res_list = sorted(epoch_res_list, key=lambda x: (x[0], x[1]), reverse=True)
             res = epoch_res_list[0]
             print(" Dev acc=%.4f, Test acc=%.4f\n" % (res[0], res[1]))
         else:
@@ -385,21 +390,22 @@ def main():
         dev_dataloader = get_dataloader(dev_dataset, args, mode="dev")
         test_dataset = MyDataset(test_data_file, params=dataset_params)
         test_dataloader = get_dataloader(test_dataset, args, mode="test")
-        template_file = os.path.join(args.output_dir, "checkpoint_{}/pytorch_model.bin")
+        template_file = os.path.join(args.output_dir, "large/checkpoint_{}/pytorch_model.bin")
         epoch_res_list = []
         for epoch in range(1, args.num_train_epochs+1):
             checkpoint_file = template_file.format(str(epoch))
-            print(" Epoch: {}".format(str(epoch)))
-            model.load_state_dict(torch.load(checkpoint_file))
-            model.eval()
+            if os.path.exists(checkpoint_file):
+                print(" Epoch: {}".format(str(epoch)))
+                model.load_state_dict(torch.load(checkpoint_file))
+                model.eval()
 
-            dev_score_dict = evaluate(model, args, dev_dataloader, tokenizer, epoch, desc="dev")
-            test_score_dict = evaluate(model, args, test_dataloader, tokenizer, epoch, desc="test")
-            # print(" Dev: Epoch=%d, Acc=%.4f, F1=%.4f\n" % (epoch, score_dict["acc_score"], score_dict["f1_score"]))
-            # print(" Test: Epoch=%d, Acc=%.4f, F1=%.4f\n" % (epoch, score_dict["acc_score"], score_dict["f1_score"]))
-            # print()
-            epoch_res_list.append((dev_score_dict["acc_score"], test_score_dict["acc_score"]))
-        epoch_res_list = sorted(epoch_res_list.items(), key=lambda x: x[0], reverse=True)
+                dev_score_dict = evaluate(model, args, dev_dataloader, tokenizer, epoch, desc="dev")
+                test_score_dict = evaluate(model, args, test_dataloader, tokenizer, epoch, desc="test")
+                print(" Dev: Epoch=%d, Acc=%.4f\n" % (epoch, dev_score_dict["acc_score"]))
+                print(" Test: Epoch=%d, Acc=%.4f\n" % (epoch, test_score_dict["acc_score"]))
+                print()
+                epoch_res_list.append((dev_score_dict["acc_score"], test_score_dict["acc_score"]))
+        epoch_res_list = sorted(epoch_res_list, key=lambda x: (x[0], x[1]), reverse=True)
         res = epoch_res_list[0]
         print(" Dev acc=%.4f, Test acc=%.4f\n" % (res[0], res[1]))
 

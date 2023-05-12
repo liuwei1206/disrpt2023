@@ -461,10 +461,10 @@ class RelDataset(Dataset):
                     all_label_index_ids.append(label_index_id)
         """
         if len(all_input_ids) > 2000:
-            all_input_ids = all_input_ids[:2000]
-            all_attention_mask = all_attention_mask[:2000]
-            all_token_type_ids = all_token_type_ids[:2000]
-            all_label_ids = all_label_ids[:2000]
+            all_input_ids = all_input_ids[:1000]
+            all_attention_mask = all_attention_mask[:1000]
+            all_token_type_ids = all_token_type_ids[:1000]
+            all_label_ids = all_label_ids[:1000]
         """
 
         self.input_ids = all_input_ids

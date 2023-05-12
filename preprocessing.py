@@ -620,8 +620,8 @@ def convert_tur(conllu_file, rel_file, output_file):
 
 def convert_all(data_folder_path):
     folder_names = os.listdir(data_folder_path)
-    for names in folder_names:
-        print(names)
+    for idx, names in enumerate(folder_names):
+        print(idx+1, names)
         # read all training files in one folder
         train_tok_file = data_folder_path + names + "/" + names + "_train.tok"
         train_conllu_file = data_folder_path + names + "/" + names + "_train.conllu"
@@ -648,7 +648,7 @@ def convert_all(data_folder_path):
 
 
 if __name__ == "__main__":
-    # convert_all("data/dataset/")
+    convert_all("data/dataset/")
 
     """
     # turkish
@@ -668,7 +668,7 @@ if __name__ == "__main__":
     convert_tur(tur_test_conll_file, tur_test_rel_file, tur_test_output_file)
     """
     
-    # """
+    """
     # zho
     dataset_list = ["eng.pdtb.tedm", "por.pdtb.crpc", "por.pdtb.tedm", "tur.pdtb.tedm"]
     for dataset in dataset_list:
@@ -679,7 +679,7 @@ if __name__ == "__main__":
             out_file = "data/dataset/{}/{}_{}.json".format(dataset, dataset, mode)
             preprocessing(tok_file, conll_file, rel_file, out_file)
 
-    # """
+    """
     # This part of code is for generating one dataset's fasttext embedding, everytime when you want to
     # generate the fasttext embedding from one dataset, please download it first!
 

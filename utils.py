@@ -94,10 +94,11 @@ def rel_labels_from_file(file_name):
                 sample = json.loads(line)
                 dname = sample["dname"]
                 doc_unit_labels = sample["doc_unit_labels"]
-                for l in doc_unit_labels:
+                for label_pair in doc_unit_labels:
                     # labels.add(l.lower())
                     # label_frequency[l.lower()] += 1
                     # label_frequency[l] += 1
+                    l = label_pair[0]
                     label_frequency[unify_rel_labels(l, dname)] += 1
     labels = []
     for key in label_frequency:
@@ -260,11 +261,8 @@ def generate_ft_dict(train_file_path, dev_file_path, test_file_path, output_path
 
 def rel_preds_to_file(pred_ids, label_list, gold_file):
     dname = gold_file.split("/")[-1].split("_")[0].strip()
-    # print(dname, label_list, gold_file)
     pred_labels = [label_list[idx] for idx in pred_ids]
-    # print(pred_labels[:10])
     pred_labels = [rel_label_to_original(label, dname) for label in pred_labels]
-    # print(pred_labels[:10])
     valid_lines = []
     with open(gold_file, "r", encoding="utf-8") as f:
         lines = f.readlines()
