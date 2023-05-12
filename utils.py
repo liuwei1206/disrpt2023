@@ -84,6 +84,26 @@ def rel_label_to_original(label, corpus_name):
     else:
         return label
 
+def rel_map_for_zeroshot(label, dname):
+    """
+    Some zeroshot corpora contain totally different label set to
+    corpora with the similar annotated theory. For example, eng.dep.covdtb
+    has very different labels to eng.dep.scidtb and zho.dep.scidtb. So here
+    we design a mapping function for such zero-shot corpora.
+    """
+    if dname == "eng.dep.covdtb":
+        mapping_dict = {
+            'ATTRIBUTION': 'ATTRIBUTION', 'BG-COMPARE': 'BACKGROUND', 'BG-GENERAL': 'BACKGROUND',
+            'BG-GOAL': 'BACKGROUND', 'CAUSE': 'CAUSE-RESULT', 'COMPARISON': 'COMPARISON',
+            'CONDITION': 'CONDITION', 'CONTRAST': 'CONTRAST', 'ELAB-ADDITION': 'ELABORATION',
+            'ELAB-ASPECT': 'ELABORATION', 'ELAB-DEFINITION': 'ELABORATION', 'ELAB-ENUMEMBER': 'ELABORATION',
+            'ELAB-EXAMPLE': 'ELABORATION', 'ELAB-PROCESS_STEP': 'ELABORATION', 'ENABLEMENT': 'ENABLEMENT',
+            'EVALUATION': 'EVALUATION', 'EXP-EVIDENCE': 'CAUSE-RESULT', 'EXP-REASON': 'CAUSE-RESULT',
+            'JOINT': 'JOINT', 'MANNER-MEANS': 'MANNER-MEANS', 'PROGRESSION': 'PROGRESSION',
+            'RESULT': 'CAUSE-RESULT', 'ROOT': 'ROOT', 'SUMMARY': 'SUMMARY', 'TEMPORAL': 'TEMPORAL'
+        }
+        return mapping_dict[label]
+
 def rel_labels_from_file(file_name):
     label_frequency = defaultdict(int)
     with open(file_name, "r", encoding="utf-8") as f:
@@ -263,6 +283,8 @@ def rel_preds_to_file(pred_ids, label_list, gold_file):
     dname = gold_file.split("/")[-1].split("_")[0].strip()
     pred_labels = [label_list[idx] for idx in pred_ids]
     pred_labels = [rel_label_to_original(label, dname) for label in pred_labels]
+    if dname in ["eng.dep.covdtb"]:
+        pred_labels = [rel_map_for_zeroshot(label, dname) for label in pred_labels]
     valid_lines = []
     with open(gold_file, "r", encoding="utf-8") as f:
         lines = f.readlines()
