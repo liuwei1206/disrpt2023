@@ -290,7 +290,8 @@ def main():
         "deu.rst.pcc", "fas.rst.prstc", "nld.rst.nldt", "por.rst.cstn",
         "rus.rst.rrt", "spa.rst.sctb", "zho.rst.sctb", "zho.dep.scidtb",
         "eng.dep.scidtb", "eng.dep.covdtb", "tur.pdtb.tdb", "tha.pdtb.tdtb", 
-        "ita.pdtb.luna", "eng.pdtb.pdtb"
+        "ita.pdtb.luna", "spa.rst.rststb", "eng.pdtb.tedm", "por.pdtb.crpc",
+        "por.pdtb.tedm"
     ]:
         print("Training a multi-linguistic model.......")
         discourse_type = args.dataset.split(".")[1]
@@ -314,7 +315,9 @@ def main():
     if args.do_adv:
         output_dir = os.path.join(output_dir, "model_adv")
     else:
-        output_dir = os.path.join(output_dir, "model")
+        output_dir = os.path.join(output_dir, "model6")
+    # output_dir = os.path.join(output_dir, "large_adv_real")
+    # output_dir = os.path.join(output_dir, "model_adv")
     args.output_dir = output_dir
 
     # 1. prepare pretrained path

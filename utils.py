@@ -485,8 +485,8 @@ def merge_datasets(discourse_type="rst"):
     elif discourse_type == "pdtb":
         # we remove the zho.pdtb.cdtb because this corpus has no common labels with other corpus
         dataset_list = [
-            "ita.pdtb.luna", "tur.pdtb.tdb",
-            "tha.pdtb.tdtb", "eng.pdtb.pdtb"
+            "ita.pdtb.luna", "tur.pdtb.tdb", "tha.pdtb.tdtb", 
+            "eng.pdtb.pdtb", "por.pdtb.crpc"
         ]
     elif discourse_type == "dep":
         dataset_list = ["eng.dep.scidtb", "zho.dep.scidtb"]

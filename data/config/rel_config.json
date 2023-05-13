@@ -15,16 +15,16 @@
 	},
 	"eng.pdtb.pdtb": {
 		"encoder_type": "roberta",
-		"pretrained_path": "roberta-base",
+		"pretrained_path": "roberta-large",
                 "lr": 1e-5,
-                "batch_size": 16,
+                "batch_size": 12,
 		"flag": "train_and_test"
 	},
 	"eng.rst.gum": {
 		"encoder_type": "roberta",
 		"pretrained_path": "roberta-large",
                 "lr": 1e-5,
-                "batch_size": 16,
+                "batch_size": 12,
 		"flag": "train_and_test"
 	},
 	"eng.rst.rstdt": {
@@ -166,7 +166,7 @@
                 "encoder_type": "xlm-roberta",
                 "pretrained_path": "xlm-roberta-large",
                 "lr": 1e-5,
-                "batch_size": 8,
+                "batch_size": 16,
                 "flag": "train_and_test"
 
         },
