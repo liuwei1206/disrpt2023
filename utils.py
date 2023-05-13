@@ -90,6 +90,8 @@ def rel_map_for_zeroshot(label, dname):
     corpora with the similar annotated theory. For example, eng.dep.covdtb
     has very different labels to eng.dep.scidtb and zho.dep.scidtb. So here
     we design a mapping function for such zero-shot corpora.
+
+    Note, mapping only works for corpora without training set
     """
     if dname == "eng.dep.covdtb":
         mapping_dict = {
@@ -103,6 +105,11 @@ def rel_map_for_zeroshot(label, dname):
             'RESULT': 'CAUSE-RESULT', 'ROOT': 'ROOT', 'SUMMARY': 'SUMMARY', 'TEMPORAL': 'TEMPORAL'
         }
         return mapping_dict[label]
+    elif dname == "por.pdtb.tedm":
+        if label == "Expansion.Level-of-detail":
+            return "Expansion.Level"
+        else:
+            return label
 
 def rel_labels_from_file(file_name):
     label_frequency = defaultdict(int)
