@@ -145,12 +145,16 @@ class BaseSegClassifier(PreTrainedModel):
             self.encoder = ElectraModel.from_pretrained(args.pretrained_path, config=config)
         elif self.encoder_type == "xlm-roberta":
             self.encoder = XLMRobertaModel.from_pretrained(args.pretrained_path, config=config)
+        elif self.encoder_type == "camembert":
+            self.encoder = CamembertModel.from_pretrained(args.pretrained_path, config=config)
+
         self.classifier = nn.Linear(config.hidden_size+args.feature_size, args.num_labels)
         self.dropout = nn.Dropout(args.dropout)
         self.num_labels = args.num_labels
         self.do_freeze = args.do_freeze
         self.do_adv = args.do_adv
         self.feature_size = args.feature_size
+        self.to_device = args.device
 
         if self.do_freeze:
             for name, param in self.encoder.named_parameters():
@@ -205,7 +209,11 @@ class BaseSegClassifier(PreTrainedModel):
         sequence_output = self.dropout(sequence_output)
         logits = self.classifier(sequence_output)
         loss_fct = CrossEntropyLoss(ignore_index=-100)
-        adv_loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+        #labels = labels.type(torch.LongTensor)
+        #labels.to(self.to_device)
+        #self.num_labels.to(self.to_device)
+        adv_loss = loss_fct(logits.view(-1, self.num_labels), labels.to(torch.int64).view(-1))
+        #adv_loss.to(self.to_device)
         return adv_loss
 
     def forward(
@@ -251,19 +259,25 @@ class BaseSegClassifier(PreTrainedModel):
 class BiLSTMCRF(PreTrainedModel):
     def __init__(self, config, args):
         super().__init__(config=config)
-
         self.encoder_type = args.encoder_type.lower()
-        self.num_labels = args.num_labels
         if self.encoder_type == "roberta":
-            self.encoder = RobertaModel.from_pretrained(args.pretrained_model, config=config)
+            self.encoder = RobertaModel.from_pretrained(args.pretrained_path, config=config)
         elif self.encoder_type == "bert":
-            self.encoder = BertModel.from_pretrained(args.pretrained_model, config=config)
+            self.encoder = BertModel.from_pretrained(args.pretrained_path, config=config)
+        elif self.encoder_type == "electra":
+            self.encoder = ElectraModel.from_pretrained(args.pretrained_path, config=config)
+        elif self.encoder_type == "xlm-roberta":
+            self.encoder = XLMRobertaModel.from_pretrained(args.pretrained_path, config=config)
+        elif self.encoder_type == "camembert":
+            self.encoder = CamembertModel.from_pretrained(args.pretrained_path, config=config)
+
         self.lstm = nn.LSTM(
             input_size=config.hidden_size, hidden_size=config.hidden_size,
             num_layers=2, bidirectional=True, batch_first=True
         )
-        self.linear = nn.Linear(config.hidden_size*2, self.num_labels)
-        self.crf = CRF(self.num_labels)
+
+        self.linear = nn.Linear(config.hidden_size*2, args.num_labels)
+        self.crf = CRF(args.num_labels)
         self.dropout = nn.Dropout(args.dropout)
         self.do_freeze = args.do_freeze
 
@@ -292,13 +306,15 @@ class BiLSTMCRF(PreTrainedModel):
                 attention_mask=attention_mask,
                 token_type_ids=token_type_ids,
             )
+
         sequence_outputs = outputs[0]
         sequence_outputs, _ = self.lstm(sequence_outputs)
         feats = self.linear(sequence_outputs)
 
-        if flag.lower() == "trian":
+        if flag.lower() == "train":
             loss = self.crf.forward(feats, labels, attention_mask).mean()
             loss = -loss
+
             outputs = (loss, )
         else:
             preds = self.crf.viterbi_decode(feats, attention_mask)
@@ -306,6 +322,141 @@ class BiLSTMCRF(PreTrainedModel):
 
         return outputs
 
+
+class BiLSTMCRFAdv(PreTrainedModel):
+    def __init__(self, config, args):
+        super().__init__(config=config)
+        self.encoder_type = args.encoder_type.lower()
+        self.do_adv = args.do_adv
+        if self.encoder_type == "roberta":
+            self.encoder = RobertaModel.from_pretrained(args.pretrained_path, config=config)
+        elif self.encoder_type == "bert":
+            self.encoder = BertModel.from_pretrained(args.pretrained_path, config=config)
+        elif self.encoder_type == "electra":
+            self.encoder = ElectraModel.from_pretrained(args.pretrained_path, config=config)
+        elif self.encoder_type == "xlm-roberta":
+            self.encoder = XLMRobertaModel.from_pretrained(args.pretrained_path, config=config)
+        elif self.encoder_type == "camembert":
+            self.encoder = CamembertModel.from_pretrained(args.pretrained_path, config=config)
+
+        self.lstm = nn.LSTM(
+            input_size=config.hidden_size, hidden_size=config.hidden_size,
+            num_layers=2, bidirectional=True, batch_first=True
+        )
+
+        self.linear = nn.Linear(config.hidden_size * 2, args.num_labels)
+        self.crf = CRF(args.num_labels)
+        self.dropout = nn.Dropout(args.dropout)
+        self.do_freeze = args.do_freeze
+
+        if self.do_freeze:
+            for name, param in self.encoder.named_parameters():
+                param.requires_grad = False
+
+    def pretrained_forward(
+            self,
+            input_ids,
+            attention_mask=None,
+            token_type_ids=None,
+    ):
+        embedding_output = self.encoder.embeddings(
+            input_ids=input_ids,
+            token_type_ids=token_type_ids,
+        )
+        input_shape = input_ids.size()
+        extended_attention_mask = self.get_extended_attention_mask(attention_mask, input_shape, input_ids.device)
+        encoder_outputs = self.encoder.encoder(
+            embedding_output,
+            attention_mask=extended_attention_mask,
+        )
+        sequence_output = encoder_outputs[0]
+        return sequence_output, embedding_output
+
+    def adv_attack(self, embedding_output, loss, epsilon=1):
+        """
+        We choose the direction that makes the loss decreases fastest.
+
+        epsilon = 1 or 5
+
+        refer to: https://github.com/akkarimi/BERT-For-ABSA/blob/master/src/bat_asc.py
+        """
+        loss_grad = grad(loss, embedding_output, retain_graph=True)[0]
+        loss_grad_norm = torch.sqrt(torch.sum(loss_grad ** 2, (1, 2)))
+        perturbed_embedding_output = embedding_output + epsilon * (loss_grad / (loss_grad_norm.reshape(-1, 1, 1)))
+        return perturbed_embedding_output
+
+    def adversarial_forward(self, embedding_output, perturbed_embedding_output, attention_mask, labels, features=None):
+        reserve_cls_mask = torch.zeros_like(embedding_output).to(embedding_output.device)
+        reserve_cls_mask[:, 0, :] = 1
+        perturbed_embedding_output = torch.where(reserve_cls_mask.byte(), embedding_output, perturbed_embedding_output)
+
+        input_shape = perturbed_embedding_output.size()[:2]
+        extended_attention_mask = self.get_extended_attention_mask(attention_mask, input_shape,
+                                                                   perturbed_embedding_output.device)
+        encoder_outputs = self.encoder.encoder(
+            perturbed_embedding_output,
+            attention_mask=extended_attention_mask,
+        )
+        sequence_output = encoder_outputs[0]
+        if features is not None and self.feature_size > 0:
+            sequence_output = torch.cat((sequence_output, features), dim=-1)
+        sequence_output = self.dropout(sequence_output)
+        logits = self.classifier(sequence_output)
+        loss_fct = CrossEntropyLoss(ignore_index=-100)
+        # labels = labels.type(torch.LongTensor)
+        # labels.to(self.to_device)
+        # self.num_labels.to(self.to_device)
+        adv_loss = loss_fct(logits.view(-1, self.num_labels), labels.to(torch.int64).view(-1))
+        # adv_loss.to(self.to_device)
+        return adv_loss
+
+    def forward(
+            self,
+            input_ids,
+            attention_mask=None,
+            token_type_ids=None,
+            labels=None,
+            features=None,
+            flag="Train"
+    ):
+        if self.do_freeze:
+            with torch.no_grad():
+                outputs = self.encoder(
+                    input_ids=input_ids,
+                    attention_mask=attention_mask,
+                    token_type_ids=token_type_ids,
+                )
+            sequence_outputs = outputs[0]
+        else:
+            sequence_outputs, embedding_output = self.pretrained_forward(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                token_type_ids=token_type_ids,
+            )
+
+
+        sequence_outputs, _ = self.lstm(sequence_outputs)
+        feats = self.linear(sequence_outputs)
+
+        if flag.lower() == "train":
+            loss = self.crf.forward(feats, labels, attention_mask).mean()
+            loss = -loss
+            if self.do_adv:
+                perturbed_embedding_output = self.adv_attack(embedding_output, loss)
+                adv_loss = self.adversarial_forward(
+                    embedding_output,
+                    perturbed_embedding_output,
+                    attention_mask,
+                    labels,
+                    features=features,
+                )
+                loss = loss + adv_loss
+            outputs = (loss,)
+        else:
+            preds = self.crf.viterbi_decode(feats, attention_mask)
+            outputs = (preds,)
+
+        return outputs
 
 class BiLSTMCRFPlus(PreTrainedModel):
     def __init__(self, config, args):
@@ -327,7 +478,7 @@ class BiLSTMCRFPlus(PreTrainedModel):
         self.pos2_encoder = None
 
         self.do_train = args.do_train
-
+        self.run_device = args.device
         if self.encoder_type == "roberta":
             self.encoder = RobertaModel.from_pretrained(args.pretrained_path, config=config)
         elif self.encoder_type == "bert":
@@ -386,7 +537,9 @@ class BiLSTMCRFPlus(PreTrainedModel):
 
         pos1_embeds = self.pos1_encoder(pos1_ids, self.pos1_vocab_len, self.pos1_dim)
         pos2_embeds = self.pos2_encoder(pos2_ids, self.pos2_vocab_len, self.pos2_dim)
-
+        pos1_embeds = pos1_embeds.to(self.run_device)
+        pos2_embeds = pos2_embeds.to(self.run_device)
+        ft_embeds = ft_embeds.to(self.run_device)
         # extra_feats = extra_feats.unsqueeze(1)
         sequence_outputs = torch.cat([sequence_outputs, pos1_embeds, pos2_embeds, ft_embeds], dim=-1)
 
@@ -394,15 +547,16 @@ class BiLSTMCRFPlus(PreTrainedModel):
         sequence_outputs, _ = self.lstm(sequence_outputs)
         feats = self.linear(sequence_outputs)
 
-        if self.do_train:
-            attention_mask = torch.BoolTensor(attention_mask)
-            labels = labels.long()
+        if flag.lower() == "train":
+            #attention_mask = torch.BoolTensor(attention_mask)
+            #labels = labels.long()
             loss = self.crf.forward(feats, labels, attention_mask).mean()
-            print("_______________________________________________")
             loss = -loss
             outputs = (loss,)
         else:
             preds = self.crf.viterbi_decode(feats, attention_mask)
+            #preds = np.array(preds)
+            #preds = self.crf.decode(feats, attention_mask.byte())
             outputs = (preds,)
 
         return outputs

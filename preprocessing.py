@@ -93,7 +93,9 @@ def conll_reader(file_name):
                         # the token's id concatenates the token's string...
 
                         # this if condition is for spa. file, because there's no sent_id!
-                        elif "spa." in file_name and cur_id > int(float(token_id)):
+                        elif (
+                                "spa." in file_name or "zho.rst.sctb" in file_name or "zho.pdtb.cdtb" in file_name or "eng.rst.rstdt" in file_name) and cur_id > int(
+                                float(token_id)):
                             acc_4_sent += acc_4_id
                             acc_4_id = 0
                             tok_id_acc = 0
@@ -145,11 +147,7 @@ def conll_reader(file_name):
 
 
 def rel_reader(file_name):
-    """
-    We need a index_id to align the rel file
-    """
     all_relation_data = {}
-    index_id = 0
     with open(file_name, "r", encoding="utf-8") as f:
         lines = f.readlines()
         lines = lines[1:]
@@ -163,10 +161,9 @@ def rel_reader(file_name):
                 # label = items[11]
                 label = items[-1]
                 if doc_id in all_relation_data:
-                    all_relation_data[doc_id].append((unit1_toks, unit2_toks, label, index_id))
+                    all_relation_data[doc_id].append((unit1_toks, unit2_toks, label))
                 else:
-                    all_relation_data[doc_id] = [(unit1_toks, unit2_toks, label, index_id)]
-                index_id += 1
+                    all_relation_data[doc_id] = [(unit1_toks, unit2_toks, label)]
 
     return all_relation_data
 
@@ -298,7 +295,6 @@ def preprocessing(tok_file, conllu_file, rel_file, output_file):
     all_doc_data = tok_reader(tok_file)
     all_conll_data = conll_reader(conllu_file)
     all_relation_data = rel_reader(rel_file)
-    dname = tok_file.split("/")[-1].split("_")[0].strip()
 
     assert len(all_doc_data) == len(all_conll_data), (len(all_doc_data), len(all_conll_data))
     # assert len(all_doc_data) == len(all_relation_data), (len(all_doc_data), len(all_relation_data))
@@ -352,8 +348,7 @@ def preprocessing(tok_file, conllu_file, rel_file, output_file):
             unit1_ids = unit_pair[0]
             unit2_ids = unit_pair[1]
             rel = unit_pair[2]
-            index_id = unit_pair[3]
-            doc_unit_labels.append((rel, index_id))
+            doc_unit_labels.append(rel)
 
             unit1_tokens = []
             unit2_tokens = []
@@ -405,7 +400,6 @@ def preprocessing(tok_file, conllu_file, rel_file, output_file):
         # save info json
         sample = {}
         sample["doc_id"] = doc_id
-        sample["dname"] = dname
         sample["doc_sents"] = doc_sent_tokens
         sample["doc_sent_token_features"] = doc_sent_token_features
         sample["doc_sent_token_labels"] = doc_sent_token_labels
@@ -506,7 +500,6 @@ def convert_tur(conllu_file, rel_file, output_file):
     print("+++++++++++++++++++++++++++++++++++++++")
     all_relation_data = rel_reader(rel_file)
     print("+++++++++++++++++++++++++++++++++++++++++++++++++++")
-    dname = rel_file.split("/")[-1].split("_")[0].strip()
 
     assert len(all_doc_data) == len(all_conll_data), (len(all_doc_data), len(all_conll_data))
     # assert len(all_doc_data) == len(all_relation_data), (len(all_doc_data), len(all_relation_data))
@@ -602,7 +595,6 @@ def convert_tur(conllu_file, rel_file, output_file):
         # save info json
         sample = {}
         sample["doc_id"] = doc_id
-        sample["dname"] = dname 
         sample["doc_sents"] = doc_sent_tokens
         sample["doc_sent_token_features"] = doc_sent_token_features
         sample["doc_sent_token_labels"] = doc_sent_token_labels
@@ -620,8 +612,8 @@ def convert_tur(conllu_file, rel_file, output_file):
 
 def convert_all(data_folder_path):
     folder_names = os.listdir(data_folder_path)
-    for idx, names in enumerate(folder_names):
-        print(idx+1, names)
+    for names in folder_names:
+        print(names)
         # read all training files in one folder
         train_tok_file = data_folder_path + names + "/" + names + "_train.tok"
         train_conllu_file = data_folder_path + names + "/" + names + "_train.conllu"
@@ -667,24 +659,23 @@ if __name__ == "__main__":
     tur_test_output_file = "data/dataset/tur.pdtb.tdb/tur.pdtb.tdb_test.json"
     convert_tur(tur_test_conll_file, tur_test_rel_file, tur_test_output_file)
     """
-    
+
     """
     # zho
-    dataset_list = ["eng.pdtb.tedm", "por.pdtb.crpc", "por.pdtb.tedm", "tur.pdtb.tedm"]
-    for dataset in dataset_list:
-        for mode in ["dev", "test"]:
-            tok_file = "data/dataset/{}/{}_{}.tok".format(dataset, dataset, mode)
-            conll_file = "data/dataset/{}/{}_{}.conllu".format(dataset, dataset, mode)
-            rel_file = "data/dataset/{}/{}_{}.rels".format(dataset, dataset, mode)
-            out_file = "data/dataset/{}/{}_{}.json".format(dataset, dataset, mode)
-            preprocessing(tok_file, conll_file, rel_file, out_file)
+    dataset = "zho.rst.sctb"
+    for mode in ["dev"]:
+        tok_file = "data/dataset/{}/{}_{}.tok".format(dataset, dataset, mode)
+        conll_file = "data/dataset/{}/{}_{}.conllu".format(dataset, dataset, mode)
+        rel_file = "data/dataset/{}/{}_{}.rels".format(dataset, dataset, mode)
+        out_file = "data/dataset/{}/{}_{}.json".format(dataset, dataset, mode)
+        preprocessing(tok_file, conll_file, rel_file, out_file)
 
     """
     # This part of code is for generating one dataset's fasttext embedding, everytime when you want to
     # generate the fasttext embedding from one dataset, please download it first!
 
-    #missing fasttext dictionary for eng.pdtb.pdtb, eng.rst.rstdt, tur.pdtb.tdb, tur.pdtb.tedm, zho.pdtb.cdtb
-
+    # missing fasttext dictionary for eng.pdtb.pdtb, eng.rst.rstdt, tur.pdtb.tdb, tur.pdtb.tedm, zho.pdtb.cdtb
+    '''
     # choose one dataset that you want to generate fasttext dictionary
     dataset_path = "data/dataset/"
     ft_target_dataset = "deu.rst.pcc"
@@ -692,7 +683,7 @@ if __name__ == "__main__":
     ft_dev_path = dataset_path + ft_target_dataset + "/" + ft_target_dataset + "_dev.json"
     ft_test_path = dataset_path + ft_target_dataset + "/" + ft_target_dataset + "_test.json"
     ft_output_path = dataset_path + ft_target_dataset + "/" + ft_target_dataset + "_ftdict.npy"
-
+    '''
     # ft_target_language = ft_target_dataset.split(".")[0]
     # print(ft_target_language)
 

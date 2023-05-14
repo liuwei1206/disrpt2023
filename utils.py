@@ -8,6 +8,8 @@ import numpy as np
 import fasttext
 import fasttext.util
 
+from seg_eval import get_scores
+
 def token_labels_from_file(file_name):
     labels = set()
     with open(file_name, "r", encoding="utf-8") as f:
@@ -205,7 +207,7 @@ def seg_preds_to_file(all_pred_ids, all_label_ids, all_attention_mask, tokenizer
 
     return pred_file
 
-def seg_preds_to_file_new(all_input_ids, all_label_ids, all_attention_mask, all_tok_idxs, tokenizer, label_id_dict, gold_tok_file):
+def seg_preds_to_file_new(all_input_ids, all_label_ids, all_attention_mask, all_tok_idxs, tokenizer, label_id_dict, gold_tok_file, nb4bag=None):
     """
     new version of writing a result tok file
     convert prediction ids to labels, and save the results into a file with the same format as gold_file
@@ -220,8 +222,6 @@ def seg_preds_to_file_new(all_input_ids, all_label_ids, all_attention_mask, all_
     new_doc_data = []
     with open(gold_tok_file, "r", encoding="utf-8") as f:
         lines = f.readlines()
-        tmp_doc_id = None
-        tmp_doc = []
         for line in lines:
             all_doc_data.append(line)
     og_tokens = []
@@ -239,23 +239,29 @@ def seg_preds_to_file_new(all_input_ids, all_label_ids, all_attention_mask, all_
             pred_labels.append(label_id_dict[int(og_labels[j])])
 
     pointer = 0
+    #print(len(og_tokens))
+    #print(len(pred_labels))
     for line in all_doc_data:
         if line != '\n':
-            if "newdoc_id" in line.lower():
+            #if "newdoc_id" in line.lower():
+            if "newdoc" in line.lower() or "newdoc_id" in line.lower():
                 new_doc_data.append(line)
             else:
                 items = line.split("\t")
                 if "-" in items[0]:  # ignore such as 16-17
                     continue
+                #print(pointer)
                 items[-1] = pred_labels[pointer]
                 items[-2] = og_tokens[pointer]
-                # print(items)
+                #print(items)
                 new_doc_data.append("\t".join(items))
                 pointer += 1
         else:
             new_doc_data.append('\n')
-
-    pred_file = gold_tok_file.replace(".tok", "_pred.tok")
+    if nb4bag is None:
+        pred_file = gold_tok_file.replace(".tok", "_pred.tok")
+    else:
+        pred_file = gold_tok_file.replace(".tok", "_pred_bag"+ str(nb4bag) +".tok")
     with open(pred_file, "w") as f:
         for line in new_doc_data:
             if line[-1:] != "\n":
@@ -263,6 +269,210 @@ def seg_preds_to_file_new(all_input_ids, all_label_ids, all_attention_mask, all_
             else:
                 f.write(line)
     return pred_file
+
+def seg_preds_to_file_new2(all_input_ids, all_label_ids, all_attention_mask, all_tok_idxs, tokenizer, label_id_dict, gold_tok_file, nb4bag=None):
+    """
+    new version of writing a result tok file
+    convert prediction ids to labels, and save the results into a file with the same format as gold_file
+    Args:
+        all_input_ids: predicted tokens' id list
+        all_label_ids: predicted labels' id list
+        all_attention_mask: attention mask of the pre-trained LM
+        label_id_dict: the dictionary map the labels' id to the original string label
+        gold_file: the original .tok file
+    """
+    all_doc_data = []
+    new_doc_data = []
+    with open(gold_tok_file, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+        for line in lines:
+            all_doc_data.append(line)
+    og_tokens = []
+    pred_labels = []
+
+    for i in range(len(all_tok_idxs)):
+        og_toks_ids = all_input_ids[i]
+        og_labels = all_label_ids[i]
+        tmp_toks = tokenizer.convert_ids_to_tokens(og_toks_ids)
+        for j in range(len(all_tok_idxs[i])):
+            if all_tok_idxs[i][j] == 1:
+                og_tokens.append(tmp_toks[j])
+                pred_labels.append(label_id_dict[int(og_labels[j])])
+
+    pointer = 0
+    for line in all_doc_data:
+        if line != '\n':
+            #if "newdoc_id" in line.lower():
+            if "newdoc id" in line.lower() or "newdoc_id" in line.lower():
+                new_doc_data.append(line)
+            else:
+                items = line.split("\t")
+                if "-" in items[0]:  # ignore such as 16-17
+                    continue
+                #print("=====================================error-------------")
+                #print(pointer)
+                #print(items)
+                #print("=====================================error-------------")
+                items[-1] = pred_labels[pointer]
+                items[-2] = og_tokens[pointer]
+                #if pointer > 1745 and pointer < 1755:
+                #    print(pointer)
+                #    print(items)
+                new_doc_data.append("\t".join(items))
+                pointer += 1
+
+        else:
+            new_doc_data.append('\n')
+    if nb4bag is None:
+        pred_file = gold_tok_file.replace(".tok", "_pred.tok")
+    else:
+        pred_file = gold_tok_file.replace(".tok", "_pred_bag"+ str(nb4bag) +".tok")
+    with open(pred_file, "w") as f:
+        for line in new_doc_data:
+            if line[-1:] != "\n":
+                f.write(line + "\n")
+            else:
+                f.write(line)
+    return pred_file
+
+
+def merge4bag(data_path, gold_tok_file):
+    file_names = os.listdir(data_path)
+    bagging_files = [data_path + "/" + file_name for file_name in file_names if "test_pred_bag" in file_name]
+    result_list = []
+    # read all pred files
+    for bagging_file in bagging_files:
+        with open(bagging_file, "r", encoding="utf-8") as f:
+            print(bagging_file)
+            lines = f.readlines()
+            temp = []
+            for line in lines:
+                if line != '\n':
+                    if "newdoc_id" in line.lower() or "newdoc" in line.lower():
+                        continue
+                    else:
+                        items = line.split("\t")
+                        if "-" in items[0]:  # ignore such as 16-17
+                            continue
+                        temp.append(items[-1])
+        print(len(temp))
+        print("===============================================================")
+        result_list.append(temp)
+
+    merge_res = []
+    # select the most voted label
+    for i in range(len(result_list[0])):
+        temp = []
+        for j in range(len(result_list)):
+            temp.append(result_list[j][i])
+        merge_res.append(temp)
+    final_res = []
+    for k in range(len(merge_res)):
+        most_voted = max(merge_res[k], key=merge_res[k].count)
+        final_res.append(most_voted)
+    print("--------------------------------------")
+    print(len(final_res))
+    print("--------------------------------------")
+    all_doc_data = []
+    new_doc_data = []
+    with open(gold_tok_file, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+        for line in lines:
+            all_doc_data.append(line)
+
+    pointer = 0
+    for line in all_doc_data:
+        if line != '\n':
+            # if "newdoc_id" in line.lower():
+            if "newdoc id" in line.lower() or "newdoc_id" in line.lower():
+                new_doc_data.append(line)
+            else:
+                items = line.split("\t")
+                if "-" in items[0]:  # ignore such as 16-17
+                    continue
+                # print("=====================================error-------------")
+                # print(pointer)
+                # print(items)
+                # print("=====================================error-------------")
+                items[-1] = final_res[pointer]
+                # print(items)
+                new_doc_data.append("\t".join(items))
+                pointer += 1
+
+        else:
+            new_doc_data.append('\n')
+
+    pred_file = gold_tok_file.replace(".tok", "_pred_bg.tok")
+    with open(pred_file, "w") as f:
+        for line in new_doc_data:
+            if line[-1:] != "\n":
+                f.write(line + "\n")
+            else:
+                f.write(line)
+    return pred_file
+
+def merge_result(gold_tok_file):
+    file_names = os.listdir(gold_tok_file)
+    bagging_files = [gold_tok_file + "/" + file_name for file_name in file_names if "test_pred_bag" in file_name]
+    result_list = []
+    for bagging_file in bagging_files:
+        with open(bagging_file, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+            temp = []
+            for line in lines:
+                if line != '\n':
+                    if "newdoc_id" in line.lower():
+                        continue
+                    else:
+                        items = line.split("\t")
+                        if "-" in items[0]:  # ignore such as 16-17
+                            continue
+                        temp.append(items)
+        result_list.append(temp)
+
+    all_preds = [[] for i in range(len(result_list[0]))]
+    for sub_res in result_list:
+        for i in range(len(sub_res)):
+            all_preds[i].append(sub_res[i][-1])
+    final_res = []
+    for pred in all_preds:
+        most_pred = max(set(pred), key=pred.count)
+        final_res.append(most_pred)
+
+    new_doc_data = []
+    pointer = 0
+    for line in result_list[0]:
+        line = " ".join(line)
+        if line != '\n':
+            # if "newdoc_id" in line.lower():
+            if "newdoc" in line.lower() or "newdoc_id" in line.lower():
+                new_doc_data.append(line)
+            else:
+                items = line.split("\t")
+                if "-" in items[0]:  # ignore such as 16-17
+                    continue
+                items[-1] = final_res[pointer]
+                #items[-2] = og_tokens[pointer]
+                new_doc_data.append("\t".join(items))
+                pointer += 1
+        else:
+            new_doc_data.append('\n')
+
+
+    pred_file = bagging_files[0].replace("bag1.tok", "bag_final.tok")
+    gold_tok = "/hits/basement/nlp/yif/disrpt2023-main/data/dataset/deu.rst.pcc/deu.rst.pcc_test.tok"
+    with open(pred_file, "w") as f:
+        for line in new_doc_data:
+            if line[-1:] != "\n":
+                f.write(line + "\n")
+            else:
+                f.write(line)
+    print(gold_tok)
+    print(pred_file)
+    score_dict = get_scores(gold_tok, pred_file)
+    return score_dict
+
+
 
 def generate_ft_dict(train_file_path, dev_file_path, test_file_path, output_path, ft_model_path, ft_lang):
     all_files = [train_file_path, dev_file_path, test_file_path]

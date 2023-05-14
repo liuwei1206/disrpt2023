@@ -7,6 +7,7 @@ import torch
 from torch.utils.data import Dataset
 from collections import defaultdict
 from utils import encode_words, get_similarity_features, unify_rel_labels
+import random
 
 
 class SegDataset(Dataset):
@@ -132,7 +133,7 @@ class SegDataset2(Dataset):
                 tmp_words += tmp_subtoks
                 if tags[t] == "Seg=B-Conn":
                     tmp_labels.append(tags[t])
-                    if "Seg=I-Conn" in self.label_dict:
+                    if "Seg=I-Conn" in self.label_dict and "tha" not in data_path:
                         tmp_labels += ["Seg=I-Conn"] * (len(tmp_subtoks) - 1)
                     else:
                         tmp_labels += ["Seg=B-Conn"] * (len(tmp_subtoks) - 1)
@@ -140,11 +141,21 @@ class SegDataset2(Dataset):
                     tmp_labels += [tags[t]] * len(tmp_subtoks)
 
             if len(tmp_words) > self.max_seq_length - 2:
-                temp_sent = [self.tokenizer.cls_token] + tmp_words[:self.max_seq_length - 2] + [
+                print("too long here------------------------------------------------------------------------")
+                print(len(tmp_words))
+                temp_sent_1 = [self.tokenizer.cls_token] + tmp_words[:self.max_seq_length - 2] + [
                     self.tokenizer.sep_token]
-                temp_sent_label = [default_label] + tmp_labels[:self.max_seq_length - 2] + [default_label]
-                self.sents.append(temp_sent)
-                self.labels.append(temp_sent_label)
+                temp_sent_label_1 = [default_label] + tmp_labels[:self.max_seq_length - 2] + [default_label]
+
+                temp_sent_2 = [self.tokenizer.cls_token] + tmp_words[self.max_seq_length - 2:] + [
+                    self.tokenizer.sep_token]
+                temp_sent_label_2 = [default_label] + tmp_labels[self.max_seq_length - 2:] + [default_label]
+
+                self.sents.append(temp_sent_1)
+                self.labels.append(temp_sent_label_1)
+
+                self.sents.append(temp_sent_2)
+                self.labels.append(temp_sent_label_2)
             else:
                 temp_sent = [self.tokenizer.cls_token] + tmp_words + [self.tokenizer.sep_token]
                 temp_sent_label = [default_label] + tmp_labels + [default_label]
@@ -190,6 +201,276 @@ class SegDataset2(Dataset):
         mask = (self.attention_mask[index] > 0)
         return self.input_ids[index], mask, self.label_ids[index], self.tok_start_idxs[index]
 
+class SegDataset3(Dataset):
+    '''New version dataset for the task1 and task2 it can fix the UNK token problem'''
+    '''Generate the dataset for task1 Segmentation'''
+
+    def __init__(self, file_name, params):
+        self.max_seq_length = params["max_seq_length"]
+        self.tokenizer = params["tokenizer"]
+        self.label_dict = params["label_dict"]
+
+        self._init_dataset(file_name)
+
+    # read the data
+    def _init_dataset(self, data_path):
+        """
+        Args:
+            file_name: data path
+        """
+        default_label = "_"
+
+        sent_list = []
+        label_list = []
+        all_texts = []
+        with open(data_path, 'r') as f:
+            for line in f.readlines():
+                line_content = json.loads(line)
+                all_texts.append(line_content)
+        for doc in all_texts:
+            doc_token_list = doc["doc_sents"]
+            doc_label_list = doc["doc_sent_token_labels"]
+
+            # serious bug in the rus.rst.rrt data
+            # in test tok file line 18988, it's an unknown string, cannot read and operate
+            if doc["doc_id"] == "sci.comp_53" and "rus.rst.rrt_test" in data_path:
+                doc_token_list[0][0] = "-"
+            for i in range(len(doc_token_list)):
+                # bugs in tur.pdtb.tdb
+                if "tur.pdtb.tdb" in data_path:
+                    for t in range(len(doc_token_list[i])):
+                        if doc_token_list[i][t] == "":
+                             doc_token_list[i][t] = "-"
+                if "spa.rst.rststb" in data_path:
+                    for t in range(len(doc_token_list[i])):
+                        if doc_token_list[i][t] == "\x91":
+                             doc_token_list[i][t] = "_"
+                sent_list.append(doc_token_list[i])
+                label_list.append(doc_label_list[i])
+
+
+        self.sents, self.labels, self.ids, self.tok_start_idxs = [], [], [], []
+        tmp_words, tmp_labels, tmp_sent_token_ids, tmp_label_ids, tmp_label_ids_list, tmp_masks, subword_lengths = [], [], [], [], [], [], []
+
+        for tokens, tags in zip(sent_list, label_list):
+            og_index = np.zeros(self.max_seq_length, dtype=np.int32)
+            subword_index = 1
+            for t in range(len(tokens)):
+                truncated_index = 0
+
+                tmp_subtoks = self.tokenizer.tokenize(tokens[t])
+                subword_lengths.append(len(tmp_subtoks))
+                #if truncated_index + len(tmp_subtoks) < self.max_seq_length - 2 and subword_index + len(tmp_subtoks) < self.max_seq_length - 2:
+                #if subword_index + len(tmp_subtoks) < self.max_seq_length - 2:
+                if (len(tmp_words) + len(tmp_subtoks)) < self.max_seq_length - 3:
+                    truncated_index = truncated_index + len(tmp_subtoks)
+                    og_index[subword_index] = 1
+                    subword_index += len(tmp_subtoks)
+
+                    tmp_words += tmp_subtoks
+                    if tags[t] == "Seg=B-Conn":
+                        tmp_labels.append(tags[t])
+                        if "Seg=I-Conn" in self.label_dict and "tha" not in data_path:
+                            tmp_labels += ["Seg=I-Conn"] * (len(tmp_subtoks) - 1)
+                        else:
+                            tmp_labels += ["Seg=B-Conn"] * (len(tmp_subtoks) - 1)
+                    else:
+                        tmp_labels += [tags[t]] * len(tmp_subtoks)
+                else:
+                    temp_sent = [self.tokenizer.cls_token] + tmp_words + [self.tokenizer.sep_token]
+                    temp_sent_label = [default_label] + tmp_labels + [default_label]
+                    self.sents.append(temp_sent)
+                    self.labels.append(temp_sent_label)
+                    self.tok_start_idxs.append(og_index)
+                    og_index = np.zeros(self.max_seq_length, dtype=np.int32)
+                    subword_index = 1
+                    og_index[subword_index] = 1
+                    tmp_words, tmp_labels = [], []
+                    tmp_words += tmp_subtoks
+
+                    if tags[t] == "Seg=B-Conn":
+                        tmp_labels.append(tags[t])
+                        if "Seg=I-Conn" in self.label_dict and "tha" not in data_path:
+                            tmp_labels += ["Seg=I-Conn"] * (len(tmp_subtoks) - 1)
+                        else:
+                            tmp_labels += ["Seg=B-Conn"] * (len(tmp_subtoks) - 1)
+                    else:
+                        tmp_labels += [tags[t]] * len(tmp_subtoks)
+            if len(tmp_words) > 0:
+                temp_sent = [self.tokenizer.cls_token] + tmp_words + [self.tokenizer.sep_token]
+                temp_sent_label = [default_label] + tmp_labels + [default_label]
+                self.sents.append(temp_sent)
+                self.labels.append(temp_sent_label)
+                self.tok_start_idxs.append(og_index)
+
+                tmp_words, tmp_labels = [], []
+
+        for sent, label in zip(self.sents, self.labels):
+            # convert to ids
+            tmp_tok_ids = self.tokenizer.convert_tokens_to_ids(sent)
+            tmp_label_ids = [self.label_dict[l] for l in label]
+            assert len(tmp_tok_ids) == len(tmp_label_ids), (len(tmp_tok_ids), len(tmp_label_ids))
+
+            # unify the sequence length
+            input_ids = np.ones(self.max_seq_length, dtype=np.int32)
+            attention_mask = np.zeros(self.max_seq_length, dtype=np.int32)
+            label_ids = np.ones(self.max_seq_length, dtype=np.int32)
+
+            input_ids = input_ids * self.tokenizer.pad_token_id
+            input_ids[:len(tmp_tok_ids)] = tmp_tok_ids
+            attention_mask[:len(tmp_tok_ids)] = 1
+            label_ids[:len(tmp_label_ids)] = tmp_label_ids
+
+            # put together
+            tmp_sent_token_ids.append(input_ids)
+            tmp_label_ids_list.append(label_ids)
+            tmp_masks.append(attention_mask)
+            tmp_words, tmp_labels, subword_lengths = [], [], []
+            too_long_flag = False
+        self.input_ids = np.array(tmp_sent_token_ids)
+        self.attention_mask = np.array(tmp_masks)
+        self.label_ids = np.array(tmp_label_ids_list)
+        self.total_size = len(tmp_sent_token_ids)
+        self.tok_start_idxs = np.array(self.tok_start_idxs)
+
+    def __len__(self):
+        return self.total_size
+
+    def __getitem__(self, index):
+        mask = (self.attention_mask[index] > 0)
+        return self.input_ids[index], mask, self.label_ids[index], self.tok_start_idxs[index]
+
+class SegDataset4Bag(Dataset):
+    '''New version dataset for the task1 and task2 it can fix the UNK token problem'''
+    '''Generate the dataset for task1 Segmentation'''
+
+    def __init__(self, file_name, params):
+        self.max_seq_length = params["max_seq_length"]
+        self.tokenizer = params["tokenizer"]
+        self.label_dict = params["label_dict"]
+        self.ratio = params["ratio"]
+        self._init_dataset(file_name)
+
+    # read the data
+    def _init_dataset(self, data_path):
+        """
+        Args:
+            file_name: data path
+        """
+        truncated = False
+        default_label = "_"
+
+        sent_list = []
+        label_list = []
+        all_texts = []
+        with open(data_path, 'r') as f:
+            for line in f.readlines():
+                line_content = json.loads(line)
+                all_texts.append(line_content)
+        for doc in all_texts:
+            doc_token_list = doc["doc_sents"]
+            doc_label_list = doc["doc_sent_token_labels"]
+            for i in range(len(doc_token_list)):
+                sent_list.append(doc_token_list[i])
+                label_list.append(doc_label_list[i])
+
+        num_samples = int(len(sent_list) * self.ratio)
+        sampled_indices = random.sample(range(len(sent_list)), num_samples)
+        sampled_sent_list = [sent_list[i] for i in sampled_indices]
+        sampled_label_list = [label_list[i] for i in sampled_indices]
+
+        self.sents, self.labels, self.ids, self.tok_start_idxs = [], [], [], []
+        tmp_words, tmp_labels, tmp_sent_token_ids, tmp_label_ids, tmp_label_ids_list, tmp_masks, subword_lengths = [], [], [], [], [], [], []
+
+        for tokens, tags in zip(sampled_sent_list, sampled_label_list):
+            for t in range(len(tokens)):
+                truncated_index = 0
+                tmp_subtoks = self.tokenizer.tokenize(tokens[t])
+                subword_lengths.append(len(tmp_subtoks))
+                if truncated_index + len(tmp_subtoks) < self.max_seq_length - 2:
+                    truncated_index = truncated_index + len(tmp_subtoks)
+                tmp_words += tmp_subtoks
+                if tags[t] == "Seg=B-Conn":
+                    tmp_labels.append(tags[t])
+                    if "Seg=I-Conn" in self.label_dict and "tha" not in data_path:
+                        tmp_labels += ["Seg=I-Conn"] * (len(tmp_subtoks) - 1)
+                    else:
+                        tmp_labels += ["Seg=B-Conn"] * (len(tmp_subtoks) - 1)
+                else:
+                    tmp_labels += [tags[t]] * len(tmp_subtoks)
+
+            temp_sent_list = []
+            temp_label_list = []
+            if len(tmp_words) > self.max_seq_length - 2:
+                print("too long here------------------------------------------------------------------------")
+                print(len(tmp_words))
+                tmp_sent_1 = [self.tokenizer.cls_token] + tmp_words[:truncated_index] + [
+                    self.tokenizer.sep_token]
+                tmp_sent_label_1 = [default_label] + tmp_labels[:truncated_index] + [default_label]
+
+                tmp_sent_2 = [self.tokenizer.cls_token] + tmp_words[truncated_index:] + [
+                    self.tokenizer.sep_token]
+                tmp_sent_label_2 = [default_label] + tmp_labels[truncated_index:] + [default_label]
+
+                self.sents.append(tmp_sent_1)
+                self.labels.append(tmp_sent_label_1)
+
+                self.sents.append(tmp_sent_2)
+                self.labels.append(tmp_sent_label_2)
+
+                temp_sent_list.append(tmp_sent_1)
+                temp_sent_list.append(tmp_sent_2)
+
+                temp_label_list.append(tmp_sent_label_1)
+                temp_label_list.append(tmp_sent_label_2)
+            else:
+                tmp_sent = [self.tokenizer.cls_token] + tmp_words + [self.tokenizer.sep_token]
+                tmp_sent_label = [default_label] + tmp_labels + [default_label]
+                self.sents.append(tmp_sent)
+                self.labels.append(tmp_sent_label)
+                temp_sent_list.append(tmp_sent)
+                temp_label_list.append(tmp_sent_label)
+
+            # convert to ids
+            for temp_sent, temp_sent_label in zip(temp_sent_list, temp_label_list):
+                tmp_tok_ids = self.tokenizer.convert_tokens_to_ids(temp_sent)
+                tmp_label_ids = [self.label_dict[l] for l in temp_sent_label]
+
+                assert len(tmp_tok_ids) == len(tmp_label_ids), (len(tmp_tok_ids), len(tmp_label_ids))
+
+                # store the location of the first part after word piece
+                token_start_idxs = 1 + np.cumsum([0] + subword_lengths[:-1])
+
+                # unify the sequence length
+                input_ids = np.ones(self.max_seq_length, dtype=np.int32)
+                attention_mask = np.zeros(self.max_seq_length, dtype=np.int32)
+                label_ids = np.ones(self.max_seq_length, dtype=np.int32)
+                og_tok_ids = np.zeros(self.max_seq_length, dtype=np.int32)
+
+                input_ids = input_ids * self.tokenizer.pad_token_id
+                input_ids[:len(tmp_tok_ids)] = tmp_tok_ids
+                attention_mask[:len(tmp_tok_ids)] = 1
+                label_ids[:len(tmp_label_ids)] = tmp_label_ids
+                og_tok_ids[:len(token_start_idxs)] = token_start_idxs
+                # put together
+                tmp_sent_token_ids.append(input_ids)
+                tmp_label_ids_list.append(label_ids)
+                tmp_masks.append(attention_mask)
+                self.tok_start_idxs.append(og_tok_ids)
+                tmp_words, tmp_labels, subword_lengths = [], [], []
+
+        self.input_ids = np.array(tmp_sent_token_ids)
+        self.attention_mask = np.array(tmp_masks)
+        self.label_ids = np.array(tmp_label_ids_list)
+        self.total_size = len(tmp_sent_token_ids)
+        self.tok_start_idxs = np.array(self.tok_start_idxs)
+
+    def __len__(self):
+        return self.total_size
+
+    def __getitem__(self, index):
+        mask = (self.attention_mask[index] > 0)
+        return self.input_ids[index], mask, self.label_ids[index], self.tok_start_idxs[index]
 
 class SegDatasetPlus(Dataset):
     '''Generate the dataset for task1 Segmentation'''
@@ -393,7 +674,6 @@ class SegDatasetPlus(Dataset):
         # return torch.from_numpy(self.input_ids[index]), torch.from_numpy(mask), torch.from_numpy(self.label_ids[index]), torch.from_numpy(self.tok_start_idxs[index]), torch.from_numpy(self.tok_pos_list1[index]), torch.from_numpy(self.tok_pos_list2[index]), torch.from_numpy(self.fasttext_embeds[index])
         return self.input_ids[index], mask, self.label_ids[index], self.tok_start_idxs[index], self.tok_pos_list1[
             index], self.tok_pos_list2[index], ft_embeds
-
 
 
 class RelDataset(Dataset):
