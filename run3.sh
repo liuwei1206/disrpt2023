@@ -8,7 +8,7 @@
 # <<"COMMENT"
 python3 task3_submit.py --do_dev --do_test \
                         --model_type="base" \
-                        --dataset="por.pdtb.tedm" \
+                        --dataset="eng.pdtb.pdtb" \
                         --max_seq_length=256 \
                         # --train_batch_size=16 \
                         # --learning_rate=1e-4 \

@@ -105,9 +105,13 @@ def rel_map_for_zeroshot(label, dname):
             'RESULT': 'CAUSE-RESULT', 'ROOT': 'ROOT', 'SUMMARY': 'SUMMARY', 'TEMPORAL': 'TEMPORAL'
         }
         return mapping_dict[label]
-    elif dname == "por.pdtb.tedm":
-        if label == "Expansion.Level-of-detail":
-            return "Expansion.Level"
+    elif dname in ["por.pdtb.tedm", "eng.pdtb.tedm", "tur.pdtb.tedm"]:
+        mapping_dict = {
+            "QAP.Hypophora": "Hypophora", "QAP": "Hypophora", "Expansion.Level": "Expansion.Level-of-detail",
+            "Comparison": "Comparison.Concession", "Temporal": "Temporal.Synchronous"
+        }
+        if label in mapping_dict:
+            return mapping_dict[label]
         else:
             return label
 
@@ -290,7 +294,7 @@ def rel_preds_to_file(pred_ids, label_list, gold_file):
     dname = gold_file.split("/")[-1].split("_")[0].strip()
     pred_labels = [label_list[idx] for idx in pred_ids]
     pred_labels = [rel_label_to_original(label, dname) for label in pred_labels]
-    if dname in ["eng.dep.covdtb"]:
+    if dname in ["eng.dep.covdtb", "por.pdtb.tedm", "eng.pdtb.tedm", "tur.pdtb.tedm"]:
         pred_labels = [rel_map_for_zeroshot(label, dname) for label in pred_labels]
     valid_lines = []
     with open(gold_file, "r", encoding="utf-8") as f:

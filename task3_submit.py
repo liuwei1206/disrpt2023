@@ -291,7 +291,7 @@ def main():
         "rus.rst.rrt", "spa.rst.sctb", "zho.rst.sctb", "zho.dep.scidtb",
         "eng.dep.scidtb", "eng.dep.covdtb", "tur.pdtb.tdb", "tha.pdtb.tdtb", 
         "ita.pdtb.luna", "spa.rst.rststb", "eng.pdtb.tedm", "por.pdtb.crpc",
-        "por.pdtb.tedm"
+        "por.pdtb.tedm", "tur.pdtb.tedm"
     ]:
         print("Training a multi-linguistic model.......")
         discourse_type = args.dataset.split(".")[1]
@@ -315,7 +315,7 @@ def main():
     if args.do_adv:
         output_dir = os.path.join(output_dir, "model_adv")
     else:
-        output_dir = os.path.join(output_dir, "model6")
+        output_dir = os.path.join(output_dir, "model")
     # output_dir = os.path.join(output_dir, "large_adv_real")
     # output_dir = os.path.join(output_dir, "model_adv")
     args.output_dir = output_dir
@@ -392,8 +392,10 @@ def main():
             print(" Dev acc=%.4f, Test acc=%.4f\n"%(res[0], res[1]))
 
     if args.do_dev or args.do_test:
+        dev_data_file = "data/dataset/eng.pdtb.tedm/eng.pdtb.tedm_dev.json"
         dev_dataset = MyDataset(dev_data_file, params=dataset_params)
         dev_dataloader = get_dataloader(dev_dataset, args, mode="dev")
+        test_data_file = "data/dataset/eng.pdtb.tedm/eng.pdtb.tedm_test.json"
         test_dataset = MyDataset(test_data_file, params=dataset_params)
         test_dataloader = get_dataloader(test_dataset, args, mode="test")
         template_file = os.path.join(args.output_dir, "checkpoint_{}/pytorch_model.bin")
