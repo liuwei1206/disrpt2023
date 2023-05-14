@@ -59,12 +59,12 @@ def get_argparse():
     parser.add_argument("--do_dev", default=False, action="store_true")
     parser.add_argument("--do_test", default=False, action="store_true")
     parser.add_argument("--do_freeze", default=False, action="store_true")
-    parser.add_argument("--do_adv", default=False, action="store_true")
-    parser.add_argument("--train_batch_size", default=16, type=int, help="move to data/config/rel_config.json")
+    # parser.add_argument("--do_adv", default=False, action="store_true")
+    # parser.add_argument("--train_batch_size", default=16, type=int, help="move to data/config/rel_config.json")
     parser.add_argument("--eval_batch_size", default=32, type=int)
     parser.add_argument("--max_seq_length", default=128, type=int)
     parser.add_argument("--num_train_epochs", default=10, type=int, help="training epoch")
-    parser.add_argument("--learning_rate", default=1e-5, type=float, help="move to data/config/rel_config.json")
+    # parser.add_argument("--learning_rate", default=1e-5, type=float, help="move to data/config/rel_config.json")
     parser.add_argument("--dropout", default=0.1, type=float)
     parser.add_argument("--max_grad_norm", default=2.0, type=float)
     parser.add_argument("--weight_decay", default=0.1, type=float)
@@ -291,21 +291,23 @@ def main():
     label_dict, label_list = rel_labels_from_file(train_data_file)
     args.train_data_file, args.dev_data_file, args.test_data_file = train_data_file, dev_data_file, test_data_file
     args.label_dict, args.label_list, args.num_labels = label_dict, label_list, len(label_list)
+
+    pretrained_path = rel_config[config_dataset]["pretrained_path"]
+    args.learning_rate = rel_config[config_dataset]["lr"]
+    args.train_batch_size = rel_config[config_dataset]["batch_size"]
+    do_adv = rel_config[config_dataset]["do_adv"]
+    if do_adv.lower() == "true":
+        args.do_adv = True
+    else:
+        args.do_adv = False
+    # pretrained_path = os.path.join("/hits/basement/nlp/liuwi/resources/pretrained_models", pretrained_path)
+    args.encoder_type = encoder_type
+    args.pretrained_path = pretrained_path
     if args.do_adv:
         output_dir = os.path.join(output_dir, "model_adv")
     else:
         output_dir = os.path.join(output_dir, "model")
     args.output_dir = output_dir
-
-    # 2. prepare pretrained path
-    pretrained_path = rel_config[config_dataset]["pretrained_path"]
-    args.learning_rate = rel_config[config_dataset]["lr"]
-    args.train_batch_size = rel_config[config_dataset]["batch_size"]
-    # print(" encoder: {}, lr: {}, batch: {}".format(encoder_type, args.learning_rate, args.train_batch_size))
-    pretrained_path = os.path.join("/hits/basement/nlp/liuwi/resources/pretrained_models", pretrained_path)
-    # print(pretrained_path)
-    args.encoder_type = encoder_type
-    args.pretrained_path = pretrained_path
 
     # 3.define models
     if args.model_type.lower() == "base":
