@@ -82,7 +82,7 @@ def set_seed(seed):
 
 
 def get_dataloader(dataset, args, mode="train"):
-    print("  {} dataset length: ".format(mode), len(dataset))
+    # print("  {} dataset length: ".format(mode), len(dataset))
     if mode.lower() == "train":
         sampler = RandomSampler(dataset)
         batch_size = args.train_batch_size
@@ -158,7 +158,6 @@ def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_da
             outputs = model(**inputs)
             loss = outputs[0]
             loss.backward()
-            # torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
             optimizer.step()
             scheduler.step()
             optimizer.zero_grad()
@@ -179,8 +178,6 @@ def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_da
         epoch_res_list.append((dev_score_dict["acc_score"], test_score_dict["acc_score"]))
         print(" Dev: Epoch=%d, Acc=%.4f\n" % (epoch, dev_score_dict["acc_score"]))
         print(" Test: Epoch=%d, Acc=%.4f\n" % (epoch, test_score_dict["acc_score"]))
-        # output_dir = os.path.join(args.output_dir, "large")
-        # output_dir = os.path.join(output_dir, f"{PREFIX_CHECKPOINT_DIR}_{epoch}")
         output_dir = os.path.join(args.output_dir, "checkpoint_{}".format(epoch))
         os.makedirs(output_dir, exist_ok=True)
         torch.save(model.state_dict(), os.path.join(output_dir, "pytorch_model.bin"))
@@ -248,11 +245,7 @@ def evaluate(model, args, dataloader, tokenizer, epoch, desc="dev", write_file=F
     pred_file = rel_preds_to_file(all_pred_ids, args.label_list, gold_file)
     score_dict = get_accuracy_score(gold_file, pred_file)
     # """
-    """
-    acc = accuracy_score(y_true=all_label_ids, y_pred=all_pred_ids)
-    f1 = f1_score(y_true=all_label_ids, y_pred=all_pred_ids, average="macro")
-    score_dict = {"acc_score": acc, "f1_score": f1}
-    """
+
     return score_dict
 
 
@@ -265,24 +258,10 @@ def main():
         device = torch.device("cpu")
         args.n_gpu = 0
     args.device = device
-    logger.info("Training/evaluation parameters %s", args)
+    # logger.info("Training/evaluation parameters %s", args)
     set_seed(args.seed)
 
-    # 1. prepare pretrained path
-    """
-    rel_config = json.load(open("data/config/rel_config.json"))
-    encoder_type = rel_config[args.dataset]["encoder_type"]
-    pretrained_path = rel_config[args.dataset]["pretrained_path"]
-    args.learning_rate = rel_config[args.dataset]["lr"]
-    args.train_batch_size = rel_config[args.dataset]["batch_size"]
-    print(" encoder: {}, lr: {}, batch: {}".format(encoder_type, args.learning_rate, args.train_batch_size))
-    pretrained_path = os.path.join("/hits/basement/nlp/liuwi/resources/pretrained_models", pretrained_path)
-    print(pretrained_path)
-    args.encoder_type = encoder_type
-    args.pretrained_path = pretrained_path
-    """
-
-    # 2.prepare data
+    # 1.prepare data
     data_dir = os.path.join(args.data_dir, args.dataset)
     args.data_dir = data_dir
     rel_config = json.load(open("data/config/rel_config.json"))
@@ -293,7 +272,7 @@ def main():
         "ita.pdtb.luna", "spa.rst.rststb", "eng.pdtb.tedm", "por.pdtb.crpc",
         "por.pdtb.tedm", "tur.pdtb.tedm"
     ]:
-        print("Training a multi-linguistic model.......")
+        print("Training a joint model.......")
         discourse_type = args.dataset.split(".")[1]
         train_data_file = merge_datasets(discourse_type)
         config_dataset = "super.{}".format(discourse_type)
@@ -301,7 +280,7 @@ def main():
         output_dir = os.path.join(args.output_dir, "super.{}".format(discourse_type))
         output_dir = os.path.join(output_dir, "{}+{}".format(args.model_type, encoder_type))
     else:
-        print("Training a mono-linguistic model.......")
+        print("Training an individual model.......")
         train_data_file = os.path.join(data_dir, "{}_train.json".format(args.dataset))
         config_dataset = args.dataset
         encoder_type = rel_config[config_dataset]["encoder_type"]        
@@ -316,17 +295,15 @@ def main():
         output_dir = os.path.join(output_dir, "model_adv")
     else:
         output_dir = os.path.join(output_dir, "model")
-    # output_dir = os.path.join(output_dir, "large_adv_real")
-    # output_dir = os.path.join(output_dir, "model_adv")
     args.output_dir = output_dir
 
-    # 1. prepare pretrained path
+    # 2. prepare pretrained path
     pretrained_path = rel_config[config_dataset]["pretrained_path"]
     args.learning_rate = rel_config[config_dataset]["lr"]
     args.train_batch_size = rel_config[config_dataset]["batch_size"]
-    print(" encoder: {}, lr: {}, batch: {}".format(encoder_type, args.learning_rate, args.train_batch_size))
+    # print(" encoder: {}, lr: {}, batch: {}".format(encoder_type, args.learning_rate, args.train_batch_size))
     pretrained_path = os.path.join("/hits/basement/nlp/liuwi/resources/pretrained_models", pretrained_path)
-    print(pretrained_path)
+    # print(pretrained_path)
     args.encoder_type = encoder_type
     args.pretrained_path = pretrained_path
 
@@ -373,7 +350,7 @@ def main():
         else:
             test_dataloader = None
         if os.path.exists(os.path.join(output_dir, "checkpoint_1/pytorch_model.bin")):
-            print("Trained multi-linguistic model already exists, evaluate....")
+            print("Trained joint model already exists, evaluate....")
             epoch_res_list = []
             template_file = os.path.join(output_dir, "checkpoint_{}/pytorch_model.bin")
             for epoch in range(1, args.num_train_epochs+1):
@@ -386,16 +363,14 @@ def main():
                     epoch_res_list.append((dev_score_dict["acc_score"], test_score_dict["acc_score"]))
             epoch_res_list = sorted(epoch_res_list, key=lambda x: (x[0], x[1]), reverse=True)
             res = epoch_res_list[0]
-            print(" Dev acc=%.4f, Test acc=%.4f\n" % (res[0], res[1]))
+            print(" Best dev acc=%.4f, corresponding test acc=%.4f\n" % (res[0], res[1]))
         else:
             res = train(model, args, tokenizer, train_dataloader, dev_dataloader, test_dataloader)
-            print(" Dev acc=%.4f, Test acc=%.4f\n"%(res[0], res[1]))
+            print(" Best dev acc=%.4f, corresponding test acc=%.4f\n"%(res[0], res[1]))
 
     if args.do_dev or args.do_test:
-        dev_data_file = "data/dataset/eng.pdtb.tedm/eng.pdtb.tedm_dev.json"
         dev_dataset = MyDataset(dev_data_file, params=dataset_params)
         dev_dataloader = get_dataloader(dev_dataset, args, mode="dev")
-        test_data_file = "data/dataset/eng.pdtb.tedm/eng.pdtb.tedm_test.json"
         test_dataset = MyDataset(test_data_file, params=dataset_params)
         test_dataloader = get_dataloader(test_dataset, args, mode="test")
         template_file = os.path.join(args.output_dir, "checkpoint_{}/pytorch_model.bin")
@@ -409,13 +384,12 @@ def main():
 
                 dev_score_dict = evaluate(model, args, dev_dataloader, tokenizer, epoch, desc="dev")
                 test_score_dict = evaluate(model, args, test_dataloader, tokenizer, epoch, desc="test")
-                print(" Dev: Epoch=%d, Acc=%.4f\n" % (epoch, dev_score_dict["acc_score"]))
+                print(" Dev: Epoch=%d, Acc=%.4f" % (epoch, dev_score_dict["acc_score"]))
                 print(" Test: Epoch=%d, Acc=%.4f\n" % (epoch, test_score_dict["acc_score"]))
-                print()
                 epoch_res_list.append((dev_score_dict["acc_score"], test_score_dict["acc_score"]))
         epoch_res_list = sorted(epoch_res_list, key=lambda x: (x[0], x[1]), reverse=True)
         res = epoch_res_list[0]
-        print(" Dev acc=%.4f, Test acc=%.4f\n" % (res[0], res[1]))
+        print(" Best dev acc=%.4f, corresponding test acc=%.4f\n" % (res[0], res[1]))
 
 if __name__ == "__main__":
     main()

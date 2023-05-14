@@ -752,8 +752,7 @@ class RelDataset(Dataset):
         self.token_type_ids = all_token_type_ids
         self.label_ids = np.array(all_label_ids)
         self.label_index_ids = np.array(all_label_index_ids)
-        # print(all_label_ids)
-        print(label_frequency)
+        # print(label_frequency)
         self.total_size = len(all_input_ids)
 
     def __len__(self):

@@ -128,21 +128,17 @@ def rel_labels_from_file(file_name):
                 dname = sample["dname"]
                 doc_unit_labels = sample["doc_unit_labels"]
                 for label_pair in doc_unit_labels:
-                    # labels.add(l.lower())
-                    # label_frequency[l.lower()] += 1
-                    # label_frequency[l] += 1
                     l = label_pair[0]
                     label_frequency[unify_rel_labels(l, dname)] += 1
     labels = []
     for key in label_frequency:
         if label_frequency[key] >= 0:
             labels.append(key)
-    # labels = list(labels)
     labels = sorted(labels, key=lambda x: x.upper())
     label_dict = {l: idx for idx, l in enumerate(labels)}
-    print(labels)
-    print(label_dict)
-    print(" Total label number: %d\n"%(len(labels)))
+    # print(labels)
+    # print(label_dict)
+    # print(" Total label number: %d\n"%(len(labels)))
 
     return label_dict, labels
 

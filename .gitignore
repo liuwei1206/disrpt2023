@@ -2,7 +2,6 @@ data/dataset
 data/embeddings
 data/logs
 data/result
-data
 *.pyc
 test.py
 *.log
