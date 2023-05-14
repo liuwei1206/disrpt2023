@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 from collections import defaultdict
-from utils import encode_words, get_similarity_features, unify_rel_labels
+from utils import unify_rel_labels
 import random
 
 

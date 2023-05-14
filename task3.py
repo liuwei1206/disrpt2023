@@ -62,7 +62,7 @@ def get_argparse():
     # parser.add_argument("--do_adv", default=False, action="store_true")
     # parser.add_argument("--train_batch_size", default=16, type=int, help="move to data/config/rel_config.json")
     parser.add_argument("--eval_batch_size", default=32, type=int)
-    parser.add_argument("--max_seq_length", default=128, type=int)
+    parser.add_argument("--max_seq_length", default=256, type=int)
     parser.add_argument("--num_train_epochs", default=10, type=int, help="training epoch")
     # parser.add_argument("--learning_rate", default=1e-5, type=float, help="move to data/config/rel_config.json")
     parser.add_argument("--dropout", default=0.1, type=float)
@@ -176,8 +176,7 @@ def train(model, args, tokenizer, train_dataloader, dev_dataloader=None, test_da
         dev_score_dict = evaluate(model, args, dev_dataloader, tokenizer, epoch, desc="dev")
         test_score_dict = evaluate(model, args, test_dataloader, tokenizer, epoch, desc="test")
         epoch_res_list.append((dev_score_dict["acc_score"], test_score_dict["acc_score"]))
-        print(" Dev: Epoch=%d, Acc=%.4f\n" % (epoch, dev_score_dict["acc_score"]))
-        print(" Test: Epoch=%d, Acc=%.4f\n" % (epoch, test_score_dict["acc_score"]))
+        print(" Epoch: %d, dev acc: %.4f, test acc: %.4f\n"%(epoch, dev_score_dict["acc_score"], test_score_dict["acc_score"]))
         output_dir = os.path.join(args.output_dir, "checkpoint_{}".format(epoch))
         os.makedirs(output_dir, exist_ok=True)
         torch.save(model.state_dict(), os.path.join(output_dir, "pytorch_model.bin"))
@@ -361,7 +360,8 @@ def main():
                     model.load_state_dict(torch.load(checkpoint_file))
                     model.eval()
                     dev_score_dict = evaluate(model, args, dev_dataloader, tokenizer, epoch, desc="dev")
-                    test_score_dict = evaluate(model, args, test_dataloader, tokenizer, epoch, desc="dev")
+                    test_score_dict = evaluate(model, args, test_dataloader, tokenizer, epoch, desc="test")
+                    print(" Epoch: %d, dev acc: %.4f, test acc: %.4f\n"%(epoch, dev_score_dict["acc_score"], test_score_dict["acc_score"]))
                     epoch_res_list.append((dev_score_dict["acc_score"], test_score_dict["acc_score"]))
             epoch_res_list = sorted(epoch_res_list, key=lambda x: (x[0], x[1]), reverse=True)
             res = epoch_res_list[0]
@@ -386,8 +386,7 @@ def main():
 
                 dev_score_dict = evaluate(model, args, dev_dataloader, tokenizer, epoch, desc="dev")
                 test_score_dict = evaluate(model, args, test_dataloader, tokenizer, epoch, desc="test")
-                print(" Dev: Epoch=%d, Acc=%.4f" % (epoch, dev_score_dict["acc_score"]))
-                print(" Test: Epoch=%d, Acc=%.4f\n" % (epoch, test_score_dict["acc_score"]))
+                print(" Epoch: %d, dev acc: %.4f, test acc: %.4f\n"%(epoch, dev_score_dict["acc_score"], test_score_dict["acc_score"]))
                 epoch_res_list.append((dev_score_dict["acc_score"], test_score_dict["acc_score"]))
         epoch_res_list = sorted(epoch_res_list, key=lambda x: (x[0], x[1]), reverse=True)
         res = epoch_res_list[0]
