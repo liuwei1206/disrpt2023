@@ -148,6 +148,7 @@ def conll_reader(file_name):
 
 def rel_reader(file_name):
     all_relation_data = {}
+    index_id = 0
     with open(file_name, "r", encoding="utf-8") as f:
         lines = f.readlines()
         lines = lines[1:]
@@ -161,9 +162,10 @@ def rel_reader(file_name):
                 # label = items[11]
                 label = items[-1]
                 if doc_id in all_relation_data:
-                    all_relation_data[doc_id].append((unit1_toks, unit2_toks, label))
+                    all_relation_data[doc_id].append((unit1_toks, unit2_toks, label, index_id))
                 else:
-                    all_relation_data[doc_id] = [(unit1_toks, unit2_toks, label)]
+                    all_relation_data[doc_id] = [(unit1_toks, unit2_toks, label, index_id)]
+                index_id += 1
 
     return all_relation_data
 
@@ -295,6 +297,7 @@ def preprocessing(tok_file, conllu_file, rel_file, output_file):
     all_doc_data = tok_reader(tok_file)
     all_conll_data = conll_reader(conllu_file)
     all_relation_data = rel_reader(rel_file)
+    dname = tok_file.split("/")[-1].split("_")[0].strip()
 
     assert len(all_doc_data) == len(all_conll_data), (len(all_doc_data), len(all_conll_data))
     # assert len(all_doc_data) == len(all_relation_data), (len(all_doc_data), len(all_relation_data))
@@ -348,7 +351,8 @@ def preprocessing(tok_file, conllu_file, rel_file, output_file):
             unit1_ids = unit_pair[0]
             unit2_ids = unit_pair[1]
             rel = unit_pair[2]
-            doc_unit_labels.append(rel)
+            index_id = unit_pair[3]
+            doc_unit_labels.append((rel, index_id))
 
             unit1_tokens = []
             unit2_tokens = []
@@ -400,6 +404,7 @@ def preprocessing(tok_file, conllu_file, rel_file, output_file):
         # save info json
         sample = {}
         sample["doc_id"] = doc_id
+        sample["dname"] = dname
         sample["doc_sents"] = doc_sent_tokens
         sample["doc_sent_token_features"] = doc_sent_token_features
         sample["doc_sent_token_labels"] = doc_sent_token_labels
