@@ -706,7 +706,7 @@ class RelDataset(Dataset):
                 for unit_words, label_info in zip(doc_units, doc_unit_labels):
                     # unit_label = unit_label.lower()
                     unit_label = label_info[0]
-                    label_index_id = label_info[1]
+                    label_index_id = int(label_info[1])
                     unit_label = unify_rel_labels(unit_label, dname)
                     unit1 = unit_words[0]
                     unit2 = unit_words[1]
