@@ -312,7 +312,7 @@ class BiLSTMCRF(PreTrainedModel):
         feats = self.linear(sequence_outputs)
 
         if flag.lower() == "train":
-            loss = self.crf.forward(feats, labels, attention_mask).mean()
+            loss = self.crf.forward(feats, labels.long(), attention_mask).mean()
             loss = -loss
 
             outputs = (loss, )
