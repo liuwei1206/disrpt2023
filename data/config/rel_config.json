@@ -38,7 +38,7 @@
 		"encoder_type": "roberta",
 		"pretrained_path": "roberta-large",
 		"lr": 1e-5,
-		"batch_size": 12,
+		"batch_size": 10,
 		"do_adv": "True"
 	},
 	"eus.rst.ert": {
@@ -57,7 +57,7 @@
 	},
 	"fra.sdrt.annodis": {
 		"encoder_type": "camembert",
-		"pretrained_path": "camembert-large",
+		"pretrained_path": "camembert/camembert-large",
 		"lr": 1e-5,
 		"batch_size": 12,
 		"do_adv": "True"
