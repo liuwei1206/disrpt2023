@@ -17,28 +17,28 @@
 		"encoder_type": "roberta",
 		"pretrained_path": "roberta-large",
 		"lr": 1e-5,
-		"batch_size": 12,
+		"batch_size": 8,
 		"do_adv": "True"
 	},
 	"eng.rst.gum": {
 		"encoder_type": "roberta",
 		"pretrained_path": "roberta-large",
 		"lr": 1e-5,
-		"batch_size": 12,
+		"batch_size": 8,
 		"do_adv": "True"
 	},
 	"eng.rst.rstdt": {
 		"encoder_type": "roberta",
 		"pretrained_path": "roberta-large",
 		"lr": 1e-5,
-		"batch_size": 12,
+		"batch_size": 8,
 		"do_adv": "True"
 	},
 	"eng.sdrt.stac": {
 		"encoder_type": "roberta",
 		"pretrained_path": "roberta-large",
 		"lr": 1e-5,
-		"batch_size": 10,
+		"batch_size": 8,
 		"do_adv": "True"
 	},
 	"eus.rst.ert": {
@@ -59,7 +59,7 @@
 		"encoder_type": "camembert",
 		"pretrained_path": "camembert/camembert-large",
 		"lr": 1e-5,
-		"batch_size": 12,
+		"batch_size": 8,
 		"do_adv": "True"
 	},
 	"ita.pdtb.luna": {
