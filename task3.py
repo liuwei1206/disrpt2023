@@ -375,6 +375,7 @@ def main():
         dev_dataloader = get_dataloader(dev_dataset, args, mode="dev")
         test_dataset = MyDataset(test_data_file, params=dataset_params)
         test_dataloader = get_dataloader(test_dataset, args, mode="test")
+        print("###### Saved checkpoints should under the folder: %s #######"%(args.output_dir))
         template_file = os.path.join(args.output_dir, "checkpoint_{}/pytorch_model.bin")
         epoch_res_list = []
         for epoch in range(1, args.num_train_epochs+1):
