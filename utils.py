@@ -5,8 +5,8 @@ from collections import defaultdict
 import torch
 import torch.nn.functional as F
 import numpy as np
-import fasttext
-import fasttext.util
+# import fasttext
+# import fasttext.util
 
 from seg_eval import get_scores
 
