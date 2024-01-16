@@ -1,5 +1,6 @@
-# disrpt2023
-The code for competition disrpt2023.
+# HITS at DISRPT 2023: Discourse Segmentation, Connective Detection, and Relation Classification
+
+Code and checkpoints for the CODI 2023 paper "[HITS at DISRPT 2023: Discourse Segmentation, Connective Detection, and Relation Classification](https://aclanthology.org/2023.disrpt-1.4.pdf)"
 
 ## Requirement
 Our working environment is Python 3.8. Before you run the code, please make sure you have installed all the required packages. You can achieve it by simply execute the shell as `sh requirements.sh`
