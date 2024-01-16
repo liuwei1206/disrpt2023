@@ -18,3 +18,30 @@ To run the code of task 3, you should do like the follows:
 1. prepare data. Put all the raw corpora under the folder "data/dataset".
 2. preprocessing. Convert the raw corpora into matched format via `python3 preprocessing.py`.
 3. run. Execute the shell file as `sh run_task3.sh`.
+
+## Cite
+```
+@inproceedings{liu-etal-2023-hits,
+    title = "{HITS} at {DISRPT} 2023: Discourse Segmentation, Connective Detection, and Relation Classification",
+    author = "Liu, Wei  and
+      Fan, Yi  and
+      Strube, Michael",
+    editor = "Braud, Chlo{\'e}  and
+      Liu, Yang Janet  and
+      Metheniti, Eleni  and
+      Muller, Philippe  and
+      Rivi{\`e}re, Laura  and
+      Rutherford, Attapol  and
+      Zeldes, Amir",
+    booktitle = "Proceedings of the 3rd Shared Task on Discourse Relation Parsing and Treebanking (DISRPT 2023)",
+    month = jul,
+    year = "2023",
+    address = "Toronto, Canada",
+    publisher = "The Association for Computational Linguistics",
+    url = "https://aclanthology.org/2023.disrpt-1.4",
+    doi = "10.18653/v1/2023.disrpt-1.4",
+    pages = "43--49",
+}
+
+
+```
